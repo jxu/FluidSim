@@ -5,15 +5,13 @@
 #include <iostream>
 #include <algorithm> // swap
 
-
 #define IX(i,j) ((i)+(N+2)*(j))
-
 using namespace std;
 
 // Constants
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 600;
-const int N = 10; // Grid size
+const int N = 20; // Grid size
 
 const float VISC = 0.5;
 const float dt = 0.1;
@@ -43,7 +41,7 @@ void set_bnd(int N, int b, float *x)
 }
 
 // Add forces
-void add_source(int N, float *x, float *s, float dt)
+void add_source(float *x, float *s, float dt)
 {
     for (int i=0; i<nsize; i++) x[i] += dt*s[i];
 }
@@ -140,7 +138,7 @@ void project(int N, float *u, float *v, float *p, float *div)
 // Density solver
 void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float dt)
 {
-    add_source(N, x, x0, dt);
+    add_source(x, x0, dt);
     swap(x0, x); diffuse(N, 0, x, x0, diff, dt);
     swap(x0, x); advect(N, 0, x, x0, u, v, dt);
 }
@@ -148,7 +146,7 @@ void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float
 // Velocity solver: addition of forces, viscous diffusion, self-advection
 void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt)
 {
-    add_source(N, u, u0, dt); add_source(N, v, v0, dt);
+    add_source(u, u0, dt); add_source(v, v0, dt);
     swap(u0, u); diffuse(N, 1, u, u0, visc, dt);
     swap(v0, v); diffuse(N, 2, v, v0, visc, dt);
     project(N, u, v, u0, v0);
@@ -170,29 +168,14 @@ void console_draw(int N, float *x)
 }
 
 
-void screen_draw(float *dens)
+void SDL_init()
 {
-    SDL_Window* window = NULL;
 
-    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
+}
 
 
-    //Create window
-    window = SDL_CreateWindow( "SDL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              SCREEN_WIDTH, SCREEN_HEIGHT,
-                              SDL_WINDOW_SHOWN );
-    if( window == NULL )
-    {
-        printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-    }
-
-    SDL_Renderer* renderer = NULL;
-    renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
-
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-    SDL_RenderClear(renderer);
+void screen_draw(SDL_Renderer *renderer, float *dens)
+{
 
     for (int i=0; i<=N+1; i++)
     {
@@ -220,10 +203,6 @@ void screen_draw(float *dens)
 
     SDL_Delay(100);
 
-
-
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 }
 
 
@@ -238,6 +217,27 @@ int main(int argc, char* args[])
 
     source[IX(3,3)] = 10.0;
 
+        SDL_Window* window = NULL;
+
+    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
+
+
+    //Create window
+    window = SDL_CreateWindow( "SDL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                              SCREEN_WIDTH, SCREEN_HEIGHT,
+                              SDL_WINDOW_SHOWN );
+    if( window == NULL )
+    {
+        printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+    }
+
+    SDL_Renderer* renderer = NULL;
+    renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
 
     const int SIM_LEN = 20;
 
@@ -247,21 +247,23 @@ int main(int argc, char* args[])
         //source[IX(3,3)] = t==0 ? 1.0 : 0.0;
         for (int j=1; j<=N; j++)
         {
-            u[IX(1,j)] = 1.0;
+            u[IX(1,j)] = 10.0;
         }
 
 
-        add_source(N, dens, source, dt);
+        add_source(dens, source, dt);
         vel_step(N, u, v, u_prev, v_prev, VISC, dt);
         dens_step(N, dens, dens_prev, u, v, DIFF, dt);
         cout << "dens" << endl;
         console_draw(N, dens);
-        screen_draw(dens);
+        screen_draw(renderer, dens);
         //cout << "u, v" << endl;
         //console_draw(N, u);
         //console_draw(N, v);
 
     }
+
+    SDL_Quit();
 
 
     return EXIT_SUCCESS;
