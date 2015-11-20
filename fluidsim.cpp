@@ -1,11 +1,8 @@
 // Fluid simulation based on Stam's 2003 paper
 // Graphics, UI implemented and some important routine changes
-
-
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <iostream>
-
 #include <algorithm> // swap
 
 
@@ -14,12 +11,12 @@
 using namespace std;
 
 // Constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
-const int N = 6; // Grid size
+const int SCREEN_WIDTH = 600;
+const int SCREEN_HEIGHT = 600;
+const int N = 10; // Grid size
 
 const float VISC = 0.5;
-const float dt = 0.5;
+const float dt = 0.1;
 const float DIFF = .1;
 
 const int DISPLAY_MODE = 0; // Console or graphics
@@ -55,7 +52,7 @@ void add_source(int N, float *x, float *s, float dt)
 void diffuse(int N, int b, float *x, float *x0, float diff, float dt)
 {
     float a = dt*diff*N*N;
-    float y[nsize] = {0};
+    //float y[nsize];
 
     for (int k=0; k<20; k++)
     {
@@ -63,13 +60,12 @@ void diffuse(int N, int b, float *x, float *x0, float diff, float dt)
         {
             for (int j=1; j<=N; j++)
             {
-                y[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)] + x[IX(i+1,j)] +
+                x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)] + x[IX(i+1,j)] +
                                                x[IX(i,j-1)] + x[IX(i,j+1)])) / (1+4*a);
             }
         }
-        //std::copy(y, y+nsize, x);
-        for (int i=0; i<nsize; i++)
-            x[i] = y[i];
+        //for (int i=0; i<nsize; i++)
+        //    x[i] = y[i];
 
         set_bnd(N, b, x);
     }
@@ -174,53 +170,58 @@ void console_draw(int N, float *x)
 }
 
 
-void screen_test()
+void screen_draw(float *dens)
 {
     SDL_Window* window = NULL;
 
     if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-    {
         printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
-    }
-    else
+
+
+    //Create window
+    window = SDL_CreateWindow( "SDL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                              SCREEN_WIDTH, SCREEN_HEIGHT,
+                              SDL_WINDOW_SHOWN );
+    if( window == NULL )
     {
-        //Create window
-        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                                  SCREEN_WIDTH, SCREEN_HEIGHT,
-                                  SDL_WINDOW_SHOWN );
-        if( window == NULL )
+        printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+    }
+
+    SDL_Renderer* renderer = NULL;
+    renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+    SDL_RenderClear(renderer);
+
+    for (int i=0; i<=N+1; i++)
+    {
+        for (int j=0; j<=N+1; j++)
         {
-            printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-        }
-        else
-        {
-            SDL_Renderer* renderer = NULL;
-            renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
-
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-            SDL_RenderClear(renderer);
-
             SDL_Rect r;
-            r.x = 50;
-            r.y = 50;
-            r.w = 50;
-            r.h = 50;
+            r.w = SCREEN_WIDTH / float(N+2);
+            r.h = SCREEN_HEIGHT / float(N+2);
+            r.x = i*r.w;
+            r.y = (N+1-j)*r.h;
 
+            int color = min(int(dens[IX(i,j)] * 255.0), 255);
 
-            SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+            SDL_SetRenderDrawColor(renderer, color, color, color, 0);
 
             // Render rect
             SDL_RenderFillRect(renderer, &r);
-
-            // Render the rect to the screen
-            SDL_RenderPresent(renderer);
-
-            // Wait for 5 sec
-            SDL_Delay(5000);
-
         }
     }
+
+
+
+    // Render the rect to the screen
+    SDL_RenderPresent(renderer);
+
+    SDL_Delay(100);
+
+
+
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
@@ -235,21 +236,30 @@ int main(int argc, char* args[])
     fill_n(dens, nsize, 0.0);
     //fill_n(dens_prev, nsize, 0.0);
 
+    source[IX(3,3)] = 10.0;
 
-    const int SIM_LEN = 10;
+
+    const int SIM_LEN = 20;
 
     for (int t=0; t<SIM_LEN; t++)
     {
         // Get from UI
-        source[IX(1,1)] = 0.3;
+        //source[IX(3,3)] = t==0 ? 1.0 : 0.0;
+        for (int j=1; j<=N; j++)
+        {
+            u[IX(1,j)] = 1.0;
+        }
+
+
         add_source(N, dens, source, dt);
         vel_step(N, u, v, u_prev, v_prev, VISC, dt);
         dens_step(N, dens, dens_prev, u, v, DIFF, dt);
         cout << "dens" << endl;
         console_draw(N, dens);
+        screen_draw(dens);
         //cout << "u, v" << endl;
-        //console_draw(N, u_prev);
-        //console_draw(N, v_prev);
+        //console_draw(N, u);
+        //console_draw(N, v);
 
     }
 
