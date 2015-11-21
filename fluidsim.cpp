@@ -4,21 +4,23 @@
 #include <stdio.h>
 #include <iostream>
 #include <algorithm> // swap
+#include <cmath>
 
 #define IX(i,j) ((i)+(N+2)*(j))
 using namespace std;
 
 // Constants
 const int SCREEN_WIDTH = 600;
-const int SCREEN_HEIGHT = 600;
-const int N = 20; // Grid size
+const int SCREEN_HEIGHT = 600;  // Should match SCREEN_WIDTH
+const int N = 20;               // Grid size
+const int SIM_LEN = 100;
+const int DELAY_LENGTH = 40;    // ms
 
 const float VISC = 0.5;
 const float dt = 0.1;
 const float DIFF = .1;
 
-const int DISPLAY_MODE = 0; // Console or graphics
-const bool CLEAR_CONSOLE = false;
+const bool DISPLAY_CONSOLE = false; // Console or graphics
 
 
 // Code begins here
@@ -27,6 +29,7 @@ const int nsize = (N+2)*(N+2);
 // Bounds (currently a box with solid walls)
 void set_bnd(int N, int b, float *x)
 {
+
     for (int i=1; i<=N; i++)
     {
         x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : x[IX(1,i)];
@@ -34,10 +37,12 @@ void set_bnd(int N, int b, float *x)
         x[IX(i,  0)] = b==2 ? -x[IX(i,1)] : x[IX(i,1)];
         x[IX(i,N+1)] = b==2 ? -x[IX(i,N)] : x[IX(i,N)];
     }
+
     x[IX(0  ,0  )] = 0.5*(x[IX(1,0  )] + x[IX(0  ,1)]);
     x[IX(0  ,N+1)] = 0.5*(x[IX(1,N+1)] + x[IX(0  ,N)]);
     x[IX(N+1,0  )] = 0.5*(x[IX(N,0  )] + x[IX(N+1,1)]);
     x[IX(N+1,N+1)] = 0.5*(x[IX(N,N+1)] + x[IX(N+1,N)]);
+
 }
 
 // Add forces
@@ -168,24 +173,18 @@ void console_draw(int N, float *x)
 }
 
 
-void SDL_init()
-{
-
-}
-
-
 void screen_draw(SDL_Renderer *renderer, float *dens)
 {
-
+    float r_size = (SCREEN_WIDTH / float(N+2));
     for (int i=0; i<=N+1; i++)
     {
         for (int j=0; j<=N+1; j++)
         {
             SDL_Rect r;
-            r.w = SCREEN_WIDTH / float(N+2);
-            r.h = SCREEN_HEIGHT / float(N+2);
-            r.x = i*r.w;
-            r.y = (N+1-j)*r.h;
+            r.w = r_size + 1;
+            r.h = r_size + 1;
+            r.x = round(i*r_size);
+            r.y = round((N+1-j)*r_size);
 
             int color = min(int(dens[IX(i,j)] * 255.0), 255);
 
@@ -196,17 +195,14 @@ void screen_draw(SDL_Renderer *renderer, float *dens)
         }
     }
 
-
-
     // Render the rect to the screen
     SDL_RenderPresent(renderer);
 
-    SDL_Delay(100);
-
+    SDL_Delay(DELAY_LENGTH);
 }
 
 
-int main(int argc, char* args[])
+int main(int, char **)
 {
     float u[nsize] = {0}, v[nsize] = {0}, u_prev[nsize] = {0}, v_prev[nsize] = {0}; // Horizontal, vertical velocity
     float dens[nsize], dens_prev[nsize] = {0};
@@ -214,16 +210,15 @@ int main(int argc, char* args[])
 
     fill_n(dens, nsize, 0.0);
     //fill_n(dens_prev, nsize, 0.0);
-
     source[IX(3,3)] = 10.0;
 
-        SDL_Window* window = NULL;
+
+    // SDL initialize
+    SDL_Window* window = NULL;
 
     if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
         printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
 
-
-    //Create window
     window = SDL_CreateWindow( "SDL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               SCREEN_WIDTH, SCREEN_HEIGHT,
                               SDL_WINDOW_SHOWN );
@@ -235,36 +230,36 @@ int main(int argc, char* args[])
     SDL_Renderer* renderer = NULL;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); // Background color, should not see this
     SDL_RenderClear(renderer);
 
 
-    const int SIM_LEN = 20;
 
     for (int t=0; t<SIM_LEN; t++)
     {
         // Get from UI
-        //source[IX(3,3)] = t==0 ? 1.0 : 0.0;
         for (int j=1; j<=N; j++)
-        {
-            u[IX(1,j)] = 10.0;
-        }
+            u[IX(1,j)] = 40.0;
+
+        if (t==10)
+            source[IX(3,3)] = 0.0;
 
 
         add_source(dens, source, dt);
         vel_step(N, u, v, u_prev, v_prev, VISC, dt);
         dens_step(N, dens, dens_prev, u, v, DIFF, dt);
-        cout << "dens" << endl;
-        console_draw(N, dens);
-        screen_draw(renderer, dens);
-        //cout << "u, v" << endl;
-        //console_draw(N, u);
-        //console_draw(N, v);
+        if (DISPLAY_CONSOLE)
+        {
+            cout << "dens" << endl;
+            console_draw(N, dens);
+            //cout << "u, v" << endl;
+            //console_draw(N, u);
+            //console_draw(N, v);
+        }
 
+        screen_draw(renderer, dens);
     }
 
     SDL_Quit();
-
-
-    return EXIT_SUCCESS;
+    return 0;
 }
