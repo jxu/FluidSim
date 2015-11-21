@@ -12,15 +12,15 @@ using namespace std;
 // Constants
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 600;  // Should match SCREEN_WIDTH
-const int N = 20;               // Grid size
-const int SIM_LEN = 100;
+const int N = 5;               // Grid size
+const int SIM_LEN = 10;
 const int DELAY_LENGTH = 40;    // ms
 
 const float VISC = 0.5;
 const float dt = 0.1;
 const float DIFF = .1;
 
-const bool DISPLAY_CONSOLE = false; // Console or graphics
+const bool DISPLAY_CONSOLE = true; // Console or graphics
 
 
 // Code begins here
@@ -173,7 +173,7 @@ void console_draw(int N, float *x)
 }
 
 
-void screen_draw(SDL_Renderer *renderer, float *dens)
+void screen_draw(SDL_Renderer *renderer, float *dens, float *u, float *v)
 {
     float r_size = (SCREEN_WIDTH / float(N+2));
     for (int i=0; i<=N+1; i++)
@@ -181,17 +181,25 @@ void screen_draw(SDL_Renderer *renderer, float *dens)
         for (int j=0; j<=N+1; j++)
         {
             SDL_Rect r;
-            r.w = r_size + 1;
-            r.h = r_size + 1;
+            r.w = r_size+1;
+            r.h = r_size+1;
             r.x = round(i*r_size);
             r.y = round((N+1-j)*r_size);
 
             int color = min(int(dens[IX(i,j)] * 255.0), 255);
 
             SDL_SetRenderDrawColor(renderer, color, color, color, 0);
-
             // Render rect
             SDL_RenderFillRect(renderer, &r);
+
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+
+            int x1 = round((i+0.5)*r_size);
+            int y1 = round((N+1-j+0.5)*r_size);
+            int x2 = x1 + u[IX(i,j)];
+            int y2 = y1 + v[IX(i,j)];
+            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+
         }
     }
 
@@ -210,7 +218,7 @@ int main(int, char **)
 
     fill_n(dens, nsize, 0.0);
     //fill_n(dens_prev, nsize, 0.0);
-    source[IX(3,3)] = 10.0;
+    //source[IX(3,3)] = 10.0;
 
 
     // SDL initialize
@@ -252,12 +260,12 @@ int main(int, char **)
         {
             cout << "dens" << endl;
             console_draw(N, dens);
-            //cout << "u, v" << endl;
-            //console_draw(N, u);
-            //console_draw(N, v);
+            cout << "u, v" << endl;
+            console_draw(N, u);
+            console_draw(N, v);
         }
 
-        screen_draw(renderer, dens);
+        screen_draw(renderer, dens, u, v);
     }
 
     SDL_Quit();
