@@ -1,5 +1,7 @@
 // Fluid simulation based on Stam's 2003 paper
 // Graphics, UI implemented and some important routine changes
+
+// Current issues: runaway values, bounds
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <iostream>
@@ -12,15 +14,16 @@ using namespace std;
 // Constants
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 600;  // Should match SCREEN_WIDTH
-const int N = 5;               // Grid size
-const int SIM_LEN = 10;
+const int N = 20;               // Grid size
+const int SIM_LEN = 1000;
 const int DELAY_LENGTH = 40;    // ms
 
-const float VISC = 0.5;
-const float dt = 0.1;
-const float DIFF = .1;
+const float VISC = 0.01;
+const float dt = .1;
+const float DIFF = .001;
 
 const bool DISPLAY_CONSOLE = true; // Console or graphics
+const bool DRAW_GRID = true;
 
 
 // Code begins here
@@ -29,7 +32,7 @@ const int nsize = (N+2)*(N+2);
 // Bounds (currently a box with solid walls)
 void set_bnd(int N, int b, float *x)
 {
-
+    const float L = .5;
     for (int i=1; i<=N; i++)
     {
         x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : x[IX(1,i)];
@@ -37,6 +40,7 @@ void set_bnd(int N, int b, float *x)
         x[IX(i,  0)] = b==2 ? -x[IX(i,1)] : x[IX(i,1)];
         x[IX(i,N+1)] = b==2 ? -x[IX(i,N)] : x[IX(i,N)];
     }
+
 
     x[IX(0  ,0  )] = 0.5*(x[IX(1,0  )] + x[IX(0  ,1)]);
     x[IX(0  ,N+1)] = 0.5*(x[IX(1,N+1)] + x[IX(0  ,N)]);
@@ -196,8 +200,8 @@ void screen_draw(SDL_Renderer *renderer, float *dens, float *u, float *v)
 
             int x1 = round((i+0.5)*r_size);
             int y1 = round((N+1-j+0.5)*r_size);
-            int x2 = x1 + u[IX(i,j)];
-            int y2 = y1 + v[IX(i,j)];
+            int x2 = x1 + r_size*u[IX(i,j)];
+            int y2 = y1 + r_size*v[IX(i,j)];
             SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
 
         }
@@ -214,11 +218,11 @@ int main(int, char **)
 {
     float u[nsize] = {0}, v[nsize] = {0}, u_prev[nsize] = {0}, v_prev[nsize] = {0}; // Horizontal, vertical velocity
     float dens[nsize], dens_prev[nsize] = {0};
-    float source[nsize] = {0};
+    //float source[nsize] = {0};
 
     fill_n(dens, nsize, 0.0);
     //fill_n(dens_prev, nsize, 0.0);
-    //source[IX(3,3)] = 10.0;
+    dens_prev[IX(3,3)] = 0.5;
 
 
     // SDL initialize
@@ -231,9 +235,8 @@ int main(int, char **)
                               SCREEN_WIDTH, SCREEN_HEIGHT,
                               SDL_WINDOW_SHOWN );
     if( window == NULL )
-    {
         printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-    }
+
 
     SDL_Renderer* renderer = NULL;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
@@ -246,23 +249,38 @@ int main(int, char **)
     for (int t=0; t<SIM_LEN; t++)
     {
         // Get from UI
-        for (int j=1; j<=N; j++)
-            u[IX(1,j)] = 40.0;
+        if (t<10)
+        {
+             //for (int j=1; j<=N/4.0; j++)
+             //   u[IX(1,j)] = 1.0;
 
-        if (t==10)
-            source[IX(3,3)] = 0.0;
+            //for (int i=N; i>3*N/4.0; i--)
+            //    v_prev[IX(i,1)] = -1.0;
+
+            //for (int j=N; j>(3*N)/4.0+1; j--)
+            //    u[IX(N,j)] = -1.0;
+
+            //for (int i=1; i<=N/4.0; i++)
+            //    v_prev[IX(i,N)] = 1.0;
+        }
 
 
-        add_source(dens, source, dt);
+
+
+        if (t==1)
+            dens_prev[IX(3,3)] = 0.0;
+
+
+        //add_source(dens, source, dt);
         vel_step(N, u, v, u_prev, v_prev, VISC, dt);
         dens_step(N, dens, dens_prev, u, v, DIFF, dt);
         if (DISPLAY_CONSOLE)
         {
             cout << "dens" << endl;
             console_draw(N, dens);
-            cout << "u, v" << endl;
-            console_draw(N, u);
-            console_draw(N, v);
+            //cout << "u, v" << endl;
+            //console_draw(N, u);
+            //console_draw(N, v);
         }
 
         screen_draw(renderer, dens, u, v);
