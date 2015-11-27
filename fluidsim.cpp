@@ -5,10 +5,9 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <iostream>
-#include <algorithm> // swap
-#include <cmath>
+#include <algorithm>
 
-#define IX(i,j) ((i)+(N+2)*(j))
+
 using namespace std;
 
 // Constants
@@ -19,20 +18,22 @@ const int SIM_LEN = 1000;
 const int DELAY_LENGTH = 40;    // ms
 
 const float VISC = 0.01;
-const float dt = .1;
-const float DIFF = .001;
+const float dt = 0.1;
+const float DIFF = 0.1;
 
-const bool DISPLAY_CONSOLE = true; // Console or graphics
-const bool DRAW_GRID = true;
+const bool DISPLAY_CONSOLE = false; // Console or graphics
+const bool DRAW_GRID = false; // implement later
 
 
 // Code begins here
 const int nsize = (N+2)*(N+2);
 
+inline int IX(int i, int j){return i + (N+2)*j;}
+
 // Bounds (currently a box with solid walls)
-void set_bnd(int N, int b, float *x)
+void set_bnd(int N, int b, vector<float> &x)
 {
-    const float L = .5;
+    /*
     for (int i=1; i<=N; i++)
     {
         x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : x[IX(1,i)];
@@ -46,58 +47,55 @@ void set_bnd(int N, int b, float *x)
     x[IX(0  ,N+1)] = 0.5*(x[IX(1,N+1)] + x[IX(0  ,N)]);
     x[IX(N+1,0  )] = 0.5*(x[IX(N,0  )] + x[IX(N+1,1)]);
     x[IX(N+1,N+1)] = 0.5*(x[IX(N,N+1)] + x[IX(N+1,N)]);
+    */
 
 }
 
-// Add forces
-void add_source(float *x, float *s, float dt)
+inline void lin_solve(int N, int b, vector<float> &x, const vector<float> &x0, float a, float c)
 {
-    for (int i=0; i<nsize; i++) x[i] += dt*s[i];
-}
-
-// Diffusion with Gauss-Seidel relaxation
-void diffuse(int N, int b, float *x, float *x0, float diff, float dt)
-{
-    float a = dt*diff*N*N;
-    //float y[nsize];
-
     for (int k=0; k<20; k++)
     {
         for (int i=1; i<=N; i++)
         {
             for (int j=1; j<=N; j++)
             {
-                x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)] + x[IX(i+1,j)] +
-                                               x[IX(i,j-1)] + x[IX(i,j+1)])) / (1+4*a);
+                x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)])) / c;
             }
         }
-        //for (int i=0; i<nsize; i++)
-        //    x[i] = y[i];
-
-        set_bnd(N, b, x);
+        set_bnd ( N, b, x );
     }
+}
+
+// Add forces
+void add_source(vector<float> &x, const vector<float> &s, float dt)
+{
+    for (int i=0; i<nsize; i++) x[i] += dt*s[i];
+}
+
+// Diffusion with Gauss-Seidel relaxation
+void diffuse(int N, int b, vector<float> &x, const vector<float> &x0, float diff, float dt)
+{
+    float a = dt*diff*N*N;
+    lin_solve(N, b, x, x0, a, 1+4*a);
 
 }
 
 // Backwards advection
-void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt)
+void advect(int N, int b, vector<float> &d, const vector<float> &d0, const vector<float> &u, const vector<float> &v, float dt)
 {
-    int i0, j0, i1, j1;
-    float x, y, s0, t0, s1, t1, dt0;
-
-    dt0 = dt*N;
+    float dt0 = dt*N;
     for (int i=1; i<=N; i++)
     {
         for (int j=1; j<=N; j++)
         {
-            x = i - dt0*u[IX(i,j)];
-            y = j - dt0*v[IX(i,j)];
+            float x = i - dt0*u[IX(i,j)];
+            float y = j - dt0*v[IX(i,j)];
             if (x<0.5) x=0.5; if (x>N+0.5) x=N+0.5;
-            i0=(int)x; i1=i0+1;
+            int i0=(int)x; int i1=i0+1;
             if (y<0.5) y=0.5; if (y>N+0.5) y=N+0.5;
-            j0=(int)y; j1=j0+1;
+            int j0=(int)y; int j1=j0+1;
 
-            s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+            float s1 = x-i0; float s0 = 1-s1; float t1 = y-j0; float t0 = 1-t1;
             d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)] + t1*d0[IX(i0,j1)]) +
                          s1*(t0*d0[IX(i1,j0)] + t1*d0[IX(i1,j1)]);
         }
@@ -106,7 +104,7 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt)
 }
 
 // Force velocity to be mass-conserving (Poisson equation black magic)
-void project(int N, float *u, float *v, float *p, float *div)
+void project(int N, vector<float> &u, vector<float> &v, vector<float> &p, vector<float> &div)
 {
     float h = 1.0/N;
     for (int i=1; i<=N; i++)
@@ -120,18 +118,7 @@ void project(int N, float *u, float *v, float *p, float *div)
     }
     set_bnd(N, 0, div); set_bnd(N, 0, p);
 
-    for (int k=0; k<20; k++)
-    {
-        for (int i=1; i<=N; i++)
-        {
-            for (int j=1; j<=N; j++)
-            {
-                p[IX(i,j)] = (div[IX(i,j)] + p[IX(i-1,j)] + p[IX(i+1,j)] +
-                                             p[IX(i,j-1)] + p[IX(i,j+1)])/4;
-            }
-        }
-        set_bnd(N, 0, p);
-    }
+    lin_solve(N, 0, p, div, 1, 4);
 
     for (int i=1; i<=N; i++)
     {
@@ -145,7 +132,7 @@ void project(int N, float *u, float *v, float *p, float *div)
 }
 
 // Density solver
-void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float dt)
+void dens_step(int N, vector<float> &x, vector<float> &x0, vector<float> &u, vector<float> &v, float diff, float dt)
 {
     add_source(x, x0, dt);
     swap(x0, x); diffuse(N, 0, x, x0, diff, dt);
@@ -153,7 +140,7 @@ void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float
 }
 
 // Velocity solver: addition of forces, viscous diffusion, self-advection
-void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt)
+void vel_step(int N, vector<float> &u, vector<float> &v, vector<float> &u0, vector<float> &v0, float visc, float dt)
 {
     add_source(u, u0, dt); add_source(v, v0, dt);
     swap(u0, u); diffuse(N, 1, u, u0, visc, dt);
@@ -165,7 +152,7 @@ void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float
 }
 
 
-void console_draw(int N, float *x)
+void console_draw(vector<float> &x)
 {
     for (int j=N+1; j>=0; j--)
     {
@@ -177,9 +164,9 @@ void console_draw(int N, float *x)
 }
 
 
-void screen_draw(SDL_Renderer *renderer, float *dens, float *u, float *v)
+void screen_draw(SDL_Renderer *renderer, vector<float> &dens, vector<float> &u, vector<float> &v)
 {
-    float r_size = (SCREEN_WIDTH / float(N+2));
+    const float r_size = (SCREEN_WIDTH / float(N+2));
     for (int i=0; i<=N+1; i++)
     {
         for (int j=0; j<=N+1; j++)
@@ -216,14 +203,10 @@ void screen_draw(SDL_Renderer *renderer, float *dens, float *u, float *v)
 
 int main(int, char **)
 {
-    float u[nsize] = {0}, v[nsize] = {0}, u_prev[nsize] = {0}, v_prev[nsize] = {0}; // Horizontal, vertical velocity
-    float dens[nsize], dens_prev[nsize] = {0};
-    //float source[nsize] = {0};
+    static vector<float> u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
+    static vector<float> dens(nsize, 0), dens_prev(nsize, 0);
 
-    fill_n(dens, nsize, 0.0);
     //fill_n(dens_prev, nsize, 0.0);
-    dens_prev[IX(3,3)] = 0.5;
-
 
     // SDL initialize
     SDL_Window* window = NULL;
@@ -245,46 +228,38 @@ int main(int, char **)
     SDL_RenderClear(renderer);
 
 
-
     for (int t=0; t<SIM_LEN; t++)
     {
         // Get from UI
-        if (t<10)
-        {
-             //for (int j=1; j<=N/4.0; j++)
-             //   u[IX(1,j)] = 1.0;
+        for (int j=1; j<=N/4.0; j++)
+            u_prev[IX(1,j)] = 10.0;
 
-            //for (int i=N; i>3*N/4.0; i--)
-            //    v_prev[IX(i,1)] = -1.0;
-
-            //for (int j=N; j>(3*N)/4.0+1; j--)
-            //    u[IX(N,j)] = -1.0;
-
-            //for (int i=1; i<=N/4.0; i++)
-            //    v_prev[IX(i,N)] = 1.0;
-        }
+        for (int i=N; i>3*N/4.0; i--)
+            v_prev[IX(i,1)] = -10.0;
 
 
 
-
-        if (t==1)
-            dens_prev[IX(3,3)] = 0.0;
+        dens_prev[IX(3,3)] = (t<100) ? 100.0 : 0.0;
 
 
-        //add_source(dens, source, dt);
         vel_step(N, u, v, u_prev, v_prev, VISC, dt);
         dens_step(N, dens, dens_prev, u, v, DIFF, dt);
+
         if (DISPLAY_CONSOLE)
         {
             cout << "dens" << endl;
-            console_draw(N, dens);
-            //cout << "u, v" << endl;
-            //console_draw(N, u);
-            //console_draw(N, v);
+            console_draw(dens);
+            cout << "u, v" << endl;
+            console_draw(u);
+            console_draw(v);
+            cout << "dens_prev" << endl;
+            console_draw(dens_prev);
         }
 
         screen_draw(renderer, dens, u, v);
     }
+
+
 
     SDL_Quit();
     return 0;
