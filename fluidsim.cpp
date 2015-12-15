@@ -50,25 +50,25 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
     x[IX(N+1,N+1)] = 0.5*(x[IX(N,N+1)] + x[IX(N+1,N)]);
 
     // Boundaries must be 2+ cells thick
+    vfloat y(nsize, 0);
     for (int i=1; i<=N; i++)
     {
         for (int j=1; j<=N; j++)
         {
-            if (b==1 && bound[IX(i,j)])
+            if (bound[IX(i,j)])
             {
-                x[IX(i,j)] = (bound[IX(i-1,j)] && bound[IX(i+1,j)]) ? 0 : - x[IX(i-1,j)] - x[IX(i+1,j)];
-            }
-            if (b==2 && bound[IX(i,j)])
-            {
-                x[IX(i,j)] = (bound[IX(i,j-1)] && bound[IX(i,j+1)]) ? 0 : - x[IX(i,j-1)] - x[IX(i,j+1)];
-            }
+                if (b==1)
+                    x[IX(i,j)] = (bound[IX(i-1,j)] && bound[IX(i+1,j)]) ? 0 : - x[IX(i-1,j)] - x[IX(i+1,j)];
+                if (b==2)
+                    x[IX(i,j)] = (bound[IX(i,j-1)] && bound[IX(i,j+1)]) ? 0 : - x[IX(i,j-1)] - x[IX(i,j+1)];
+                if (b==0)
+                {
+                    x[IX(i,j)] = 0;
+                }
 
+            }
         }
     }
-
-
-
-
 }
 
 inline void lin_solve(int N, int b, vfloat &x, const vfloat &x0, float a, float c, vector<bool> &bound)
@@ -199,13 +199,19 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vec
 
             if (bound[IX(i,j)] == 0)
             {
-                int color = min(int(dens[IX(i,j)] * 255.0), 255);
-                SDL_SetRenderDrawColor(renderer, color, color, color, 0);
+                if (dens[IX(i,j)] < 2.0)
+                {
+                    int color = min(int(dens[IX(i,j)] * 255.0), 255);
+                    SDL_SetRenderDrawColor(renderer, color, color, color, 0);
+                }
+                else // Negative density (error)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 0, 255, 0);
+                }
+
             }
-            else
-            {
+            else // Object boundary
                 SDL_SetRenderDrawColor(renderer, 0, 100, 100, 0);
-            }
 
             // Render rect
             SDL_RenderFillRect(renderer, &r);
@@ -256,7 +262,7 @@ int main(int, char **)
     SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); // Background color, should not see this
     SDL_RenderClear(renderer);
 
-    for (int i=5; i<=7; i++)
+    for (int i=6; i<=8; i++)
     {
         for (int j=0; j<=10; j++)
             bounds[IX(i,j)] = 1;
@@ -276,7 +282,6 @@ int main(int, char **)
         for (int j=N; j>=3*N/4.0; j--)
             u_prev[IX(N,j)] = -20.0;
         */
-
 
         dens_prev[IX(3,3)] = (t<100) ? 100.0 : 0.0;
 
