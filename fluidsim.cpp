@@ -20,7 +20,7 @@ const int DELAY_LENGTH = 40;    // ms
 
 const float VISC = .01;
 const float dt = 0.1;
-const float DIFF = 1;
+const float DIFF = 0.5;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
 const bool DRAW_GRID = false; // implement later
@@ -49,8 +49,7 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
     x[IX(N+1,0  )] = 0.5*(x[IX(N,0  )] + x[IX(N+1,1)]);
     x[IX(N+1,N+1)] = 0.5*(x[IX(N,N+1)] + x[IX(N+1,N)]);
 
-    // Boundaries must be 2+ cells thick
-    vfloat y(nsize, 0);
+    // Boundaries should be 2+ cells thick
     for (int i=1; i<=N; i++)
     {
         for (int j=1; j<=N; j++)
@@ -59,10 +58,18 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
             {
                 if (b==1)
                     x[IX(i,j)] = (bound[IX(i-1,j)] && bound[IX(i+1,j)]) ? 0 : - x[IX(i-1,j)] - x[IX(i+1,j)];
-                if (b==2)
+                else if (b==2)
                     x[IX(i,j)] = (bound[IX(i,j-1)] && bound[IX(i,j+1)]) ? 0 : - x[IX(i,j-1)] - x[IX(i,j+1)];
-                if (b==0)
+                else if (b==0)
                 {
+                    // Distribute density from bound to surrounding cells
+                    int nearby_count = !bound[IX(i+1,j)] + !bound[IX(i-1,j)] + !bound[IX(i,j+1)] + !bound[IX(i,j-1)];
+                    float spread = x[IX(i,j)] / nearby_count;
+                    if (!bound[IX(i+1,j)]) x[IX(i+1,j)] += spread;
+                    if (!bound[IX(i-1,j)]) x[IX(i-1,j)] += spread;
+                    if (!bound[IX(i,j+1)]) x[IX(i,j+1)] += spread;
+                    if (!bound[IX(i,j-1)]) x[IX(i,j-1)] += spread;
+
                     x[IX(i,j)] = 0;
                 }
 
@@ -273,7 +280,7 @@ int main(int, char **)
         // Get from UI
 
         for (int j=1; j<=N/4.0; j++)
-            u_prev[IX(1,j)] = 50.0;
+            u_prev[IX(1,j)] = 30.0;
 
         /*
         for (int i=N; i>3*N/4.0; i--)
