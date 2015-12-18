@@ -14,13 +14,13 @@ typedef std::vector<float> vfloat;
 // Constants
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 800;  // Should match SCREEN_WIDTH
-const int N = 20;               // Grid size
+const int N = 50;               // Grid size
 const int SIM_LEN = 1000;
 const int DELAY_LENGTH = 40;    // ms
 
-const float VISC = .01;
+const float VISC = 10.0;
 const float dt = 0.1;
-const float DIFF = 0.5;
+const float DIFF = 0.01;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
 const bool DRAW_GRID = false; // implement later
@@ -38,10 +38,10 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
 
     for (int i=1; i<=N; i++)
     {
-        x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : 0.5*x[IX(1,i)];
-        x[IX(N+1,i)] = b==1 ? -x[IX(N,i)] : 0.5*x[IX(N,i)];
-        x[IX(i,  0)] = b==2 ? -x[IX(i,1)] : 0.5*x[IX(i,1)];
-        x[IX(i,N+1)] = b==2 ? -x[IX(i,N)] : 0.5*x[IX(i,N)];
+        x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : x[IX(1,i)];
+        x[IX(N+1,i)] = b==1 ? -x[IX(N,i)] : x[IX(N,i)];
+        x[IX(i,  0)] = b==2 ? -x[IX(i,1)] : x[IX(i,1)];
+        x[IX(i,N+1)] = b==2 ? -x[IX(i,N)] : x[IX(i,N)];
     }
 
     x[IX(0  ,0  )] = 0.5*(x[IX(1,0  )] + x[IX(0  ,1)]);
@@ -60,6 +60,7 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
                     x[IX(i,j)] = (bound[IX(i-1,j)] && bound[IX(i+1,j)]) ? 0 : - x[IX(i-1,j)] - x[IX(i+1,j)];
                 else if (b==2)
                     x[IX(i,j)] = (bound[IX(i,j-1)] && bound[IX(i,j+1)]) ? 0 : - x[IX(i,j-1)] - x[IX(i,j+1)];
+                /*
                 else if (b==0)
                 {
                     // Distribute density from bound to surrounding cells
@@ -72,7 +73,7 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
 
                     x[IX(i,j)] = 0;
                 }
-
+                */
             }
         }
     }
@@ -103,7 +104,7 @@ void add_source(vfloat &x, const vfloat &s, float dt)
 void diffuse(int N, int b, vfloat &x, const vfloat &x0, float diff, float dt, vector<bool> &bound)
 {
     float a = dt*diff*N*N;
-    lin_solve(N, b, x, x0, a, 1+4*a, bound);
+    lin_solve(N, b, x, x0, a, 1+4*a+dt, bound); // Amazing fix due to Iwillnotexist Idonotexist
 
 }
 
@@ -208,12 +209,12 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vec
             {
                 if (dens[IX(i,j)] < 2.0)
                 {
-                    int color = min(int(dens[IX(i,j)] * 255.0), 255);
+                    int color = min(int(dens[IX(i,j)] * 255), 255);
                     SDL_SetRenderDrawColor(renderer, color, color, color, 0);
                 }
                 else // Negative density (error)
                 {
-                    SDL_SetRenderDrawColor(renderer, 255, 0, 255, 0);
+                    SDL_SetRenderDrawColor(renderer, 255, 200, 255, 0);
                 }
 
             }
@@ -269,7 +270,7 @@ int main(int, char **)
     SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); // Background color, should not see this
     SDL_RenderClear(renderer);
 
-    for (int i=6; i<=8; i++)
+    for (int i=0; i<=8; i++)
     {
         for (int j=0; j<=10; j++)
             bounds[IX(i,j)] = 1;
@@ -279,18 +280,25 @@ int main(int, char **)
     {
         // Get from UI
 
-        for (int j=1; j<=N/4.0; j++)
-            u_prev[IX(1,j)] = 30.0;
+        for (int j=1; j<=N/5.0; j++)
+            v_prev[IX(1,j)] = 10.0;
+
+
+        //for (int j=4*N/10.0; j<6*N/10.0; j++)
+        //{
+        //    for (int i=0; i<1*N/10.0; i++)
+        //        u_prev[IX(i,j)] = 100.0;
+        //}
+
 
         /*
-        for (int i=N; i>3*N/4.0; i--)
-            v_prev[IX(i,1)] = 20.0;
 
         for (int j=N; j>=3*N/4.0; j--)
             u_prev[IX(N,j)] = -20.0;
         */
 
-        dens_prev[IX(3,3)] = (t<100) ? 100.0 : 0.0;
+        for (int j=4*N/10.0; j<6*N/10.0;j++)
+            dens_prev[IX(3,j)] = (t<100) ? 10.0 : 0.0;
 
 
         vel_step(N, u, v, u_prev, v_prev, VISC, dt, bounds);
