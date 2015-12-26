@@ -1,7 +1,5 @@
 // Fluid simulation based on Stam's 2003 paper
 // Graphics, UI implemented and some important routine changes
-
-// Current issues: bounds
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <iostream>
@@ -242,19 +240,31 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vec
 }
 
 // Add density (or velocity) based on user input
-void process_input(vfloat &dens)
+void process_input(vfloat &dens_prev)
 {
     int x, y;
     int *ptr_x = &x, *ptr_y = &y;
 
+    float r_size = (SCREEN_WIDTH / float(N+2));
+
     SDL_PumpEvents();
     int mouse_state = SDL_GetMouseState(ptr_x, ptr_y);
 
-    if (mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT))
-        std::cout << "Left mouse: " << x << ' ' << y << std::endl;
-    if (mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT))
-        std::cout << "Right mouse: " << x << ' ' << y << std::endl;
+    if (mouse_state & (SDL_BUTTON(SDL_BUTTON_LEFT) | SDL_BUTTON(SDL_BUTTON_RIGHT)))
+    {
+        int grid_x = round(x/r_size);
+        int grid_y = N+2 - round(y/r_size);
+        if (mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT))
+        {
+            std::cout << "Left mouse: ";
+            dens_prev[IX(grid_x, grid_y)] = 100;
+        }
 
+        if (mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT))
+            std::cout << "Right mouse: ";
+
+        std::cout << x << ' ' << y << '|' << grid_x << ' ' << grid_y << std::endl;
+    }
 }
 
 int main(int, char **)
@@ -291,7 +301,7 @@ int main(int, char **)
     for (int t=0; t<SIM_LEN; t++)
     {
 
-        process_input(dens);
+        process_input(dens_prev);
 
         for (int j=2*N/10.0; j<8*N/10.0; j++)
         {
@@ -301,7 +311,7 @@ int main(int, char **)
 
 
         for (int j=4*N/10.0; j<6*N/10.0;j++)
-            dens_prev[IX(3,j)] = (t<100) ? 100.0 : 0.0;
+            dens_prev[IX(3,j)] = (t<100) ? 10.0 : 0.0;
 
 
         vel_step(u, v, u_prev, v_prev, VISC, dt, bounds);
