@@ -18,8 +18,8 @@ const int N = 50;               // Grid size
 const int SIM_LEN = 1000;
 const int DELAY_LENGTH = 40;    // ms
 
-const float VISC = 10.0;
-const float dt = 0.1;
+const float VISC = 0.01;
+const float dt = 0.01;
 const float DIFF = 0.01;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
@@ -33,7 +33,7 @@ const int nsize = (N+2)*(N+2);
 inline int IX(int i, int j){return i + (N+2)*j;}
 
 // Bounds (currently a box with solid walls)
-void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
+void set_bnd(const int b, vfloat &x, vector<bool> &bound)
 {
 
     for (int i=1; i<=N; i++)
@@ -60,7 +60,7 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
                     x[IX(i,j)] = (bound[IX(i-1,j)] && bound[IX(i+1,j)]) ? 0 : - x[IX(i-1,j)] - x[IX(i+1,j)];
                 else if (b==2)
                     x[IX(i,j)] = (bound[IX(i,j-1)] && bound[IX(i,j+1)]) ? 0 : - x[IX(i,j-1)] - x[IX(i,j+1)];
-                /*
+
                 else if (b==0)
                 {
                     // Distribute density from bound to surrounding cells
@@ -73,13 +73,12 @@ void set_bnd(int N, const int b, vfloat &x, vector<bool> &bound)
 
                     x[IX(i,j)] = 0;
                 }
-                */
             }
         }
     }
 }
 
-inline void lin_solve(int N, int b, vfloat &x, const vfloat &x0, float a, float c, vector<bool> &bound)
+inline void lin_solve(int b, vfloat &x, const vfloat &x0, float a, float c, vector<bool> &bound)
 {
     for (int k=0; k<20; k++)
     {
@@ -90,7 +89,7 @@ inline void lin_solve(int N, int b, vfloat &x, const vfloat &x0, float a, float 
                 x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)])) / c;
             }
         }
-        set_bnd (N, b, x, bound);
+        set_bnd (b, x, bound);
     }
 }
 
@@ -101,15 +100,15 @@ void add_source(vfloat &x, const vfloat &s, float dt)
 }
 
 // Diffusion with Gauss-Seidel relaxation
-void diffuse(int N, int b, vfloat &x, const vfloat &x0, float diff, float dt, vector<bool> &bound)
+void diffuse(int b, vfloat &x, const vfloat &x0, float diff, float dt, vector<bool> &bound)
 {
     float a = dt*diff*N*N;
-    lin_solve(N, b, x, x0, a, 1+4*a+dt, bound); // Amazing fix due to Iwillnotexist Idonotexist
+    lin_solve(b, x, x0, a, 1+4*a+dt, bound); // Amazing fix due to Iwillnotexist Idonotexist
 
 }
 
 // Backwards advection
-void advect(int N, int b, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v, float dt, vector<bool> &bound)
+void advect(int b, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v, float dt, vector<bool> &bound)
 {
     float dt0 = dt*N;
     for (int i=1; i<=N; i++)
@@ -128,11 +127,11 @@ void advect(int N, int b, vfloat &d, const vfloat &d0, const vfloat &u, const vf
                          s1*(t0*d0[IX(i1,j0)] + t1*d0[IX(i1,j1)]);
         }
     }
-    set_bnd(N, b, d, bound);
+    set_bnd(b, d, bound);
 }
 
 // Force velocity to be mass-conserving (Poisson equation black magic)
-void project(int N, vfloat &u, vfloat &v, vfloat &p, vfloat &div, vector<bool> bound)
+void project(vfloat &u, vfloat &v, vfloat &p, vfloat &div, vector<bool> bound)
 {
     float h = 1.0/N;
     for (int i=1; i<=N; i++)
@@ -144,9 +143,9 @@ void project(int N, vfloat &u, vfloat &v, vfloat &p, vfloat &div, vector<bool> b
             p[IX(i,j)] = 0;
         }
     }
-    set_bnd(N, 0, div, bound); set_bnd(N, 0, p, bound);
+    set_bnd(0, div, bound); set_bnd(0, p, bound);
 
-    lin_solve(N, 0, p, div, 1, 4, bound);
+    lin_solve(0, p, div, 1, 4, bound);
 
     for (int i=1; i<=N; i++)
     {
@@ -156,27 +155,27 @@ void project(int N, vfloat &u, vfloat &v, vfloat &p, vfloat &div, vector<bool> b
             v[IX(i,j)] -= 0.5*(p[IX(i,j+1)] - p[IX(i,j-1)])/h;
         }
     }
-    set_bnd(N, 1, u, bound); set_bnd(N, 2, v, bound);
+    set_bnd(1, u, bound); set_bnd(2, v, bound);
 }
 
 // Density solver
-void dens_step(int N, vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float diff, float dt, vector<bool> &bound)
+void dens_step(vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float diff, float dt, vector<bool> &bound)
 {
     add_source(x, x0, dt);
-    swap(x0, x); diffuse(N, 0, x, x0, diff, dt, bound);
-    swap(x0, x); advect(N, 0, x, x0, u, v, dt, bound);
+    swap(x0, x); diffuse(0, x, x0, diff, dt, bound);
+    swap(x0, x); advect(0, x, x0, u, v, dt, bound);
 }
 
 // Velocity solver: addition of forces, viscous diffusion, self-advection
-void vel_step(int N, vfloat &u, vfloat &v, vfloat &u0, vfloat &v0, float visc, float dt, vector<bool> &bound)
+void vel_step(vfloat &u, vfloat &v, vfloat &u0, vfloat &v0, float visc, float dt, vector<bool> &bound)
 {
     add_source(u, u0, dt); add_source(v, v0, dt);
-    swap(u0, u); diffuse(N, 1, u, u0, visc, dt, bound);
-    swap(v0, v); diffuse(N, 2, v, v0, visc, dt, bound);
-    project(N, u, v, u0, v0, bound);
+    swap(u0, u); diffuse(1, u, u0, visc, dt, bound);
+    swap(v0, v); diffuse(2, v, v0, visc, dt, bound);
+    project(u, v, u0, v0, bound);
     swap(u0, u); swap(v0, v);
-    advect(N, 1, u, u0, u0, v0, dt, bound); advect(N, 2, v, v0, u0, v0, dt, bound);
-    project(N, u, v, u0, v0, bound);
+    advect(1, u, u0, u0, v0, dt, bound); advect(2, v, v0, u0, v0, dt, bound);
+    project(u, v, u0, v0, bound);
 }
 
 
@@ -207,15 +206,14 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vec
 
             if (bound[IX(i,j)] == 0)
             {
-                if (dens[IX(i,j)] < 2.0)
+                //if (dens[IX(i,j)] < 2.0)
                 {
                     int color = min(int(dens[IX(i,j)] * 255), 255);
                     SDL_SetRenderDrawColor(renderer, color, color, color, 0);
                 }
-                else // Negative density (error)
-                {
-                    SDL_SetRenderDrawColor(renderer, 255, 200, 255, 0);
-                }
+                //else // Negative density (error)
+                //    SDL_SetRenderDrawColor(renderer, 255, 200, 255, 0);
+
 
             }
             else // Object boundary
@@ -243,6 +241,21 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vec
     SDL_Delay(DELAY_LENGTH);
 }
 
+// Add density (or velocity) based on user input
+void process_input(vfloat &dens)
+{
+    int x, y;
+    int *ptr_x = &x, *ptr_y = &y;
+
+    SDL_PumpEvents();
+    int mouse_state = SDL_GetMouseState(ptr_x, ptr_y);
+
+    if (mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT))
+        std::cout << "Left mouse: " << x << ' ' << y << std::endl;
+    if (mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT))
+        std::cout << "Right mouse: " << x << ' ' << y << std::endl;
+
+}
 
 int main(int, char **)
 {
@@ -263,46 +276,36 @@ int main(int, char **)
     if( window == NULL )
         printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
 
-
     SDL_Renderer* renderer = NULL;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
 
     SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); // Background color, should not see this
     SDL_RenderClear(renderer);
 
-    for (int i=0; i<=8; i++)
+    for (int i=15; i<=20; i++)
     {
-        for (int j=0; j<=10; j++)
+        for (int j=20; j<=30; j++)
             bounds[IX(i,j)] = 1;
     }
 
     for (int t=0; t<SIM_LEN; t++)
     {
-        // Get from UI
 
-        for (int j=1; j<=N/5.0; j++)
-            v_prev[IX(1,j)] = 10.0;
+        process_input(dens);
 
+        for (int j=2*N/10.0; j<8*N/10.0; j++)
+        {
+            for (int i=0; i<10; i++)
+                u_prev[IX(i,j)] = 200.0;
+        }
 
-        //for (int j=4*N/10.0; j<6*N/10.0; j++)
-        //{
-        //    for (int i=0; i<1*N/10.0; i++)
-        //        u_prev[IX(i,j)] = 100.0;
-        //}
-
-
-        /*
-
-        for (int j=N; j>=3*N/4.0; j--)
-            u_prev[IX(N,j)] = -20.0;
-        */
 
         for (int j=4*N/10.0; j<6*N/10.0;j++)
-            dens_prev[IX(3,j)] = (t<100) ? 10.0 : 0.0;
+            dens_prev[IX(3,j)] = (t<100) ? 100.0 : 0.0;
 
 
-        vel_step(N, u, v, u_prev, v_prev, VISC, dt, bounds);
-        dens_step(N, dens, dens_prev, u, v, DIFF, dt, bounds);
+        vel_step(u, v, u_prev, v_prev, VISC, dt, bounds);
+        dens_step(dens, dens_prev, u, v, DIFF, dt, bounds);
 
         if (DISPLAY_CONSOLE)
         {
