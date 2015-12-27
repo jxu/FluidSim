@@ -269,6 +269,13 @@ void process_input(vfloat &dens_prev, vfloat &dens)
         {
             std::cout << "Right ";
             dens[IX(grid_x,grid_y)] = 0.0f;
+            if (1<=grid_x && grid_x<=N && 1<=grid_y && grid_y<=N)
+            {
+                dens[IX(grid_x-1,grid_y)] = 0.0f;
+                dens[IX(grid_x+1,grid_y)] = 0.0f;
+                dens[IX(grid_x,grid_y+1)] = 0.0f;
+                dens[IX(grid_x,grid_y-1)] = 0.0f;
+            }
         }
 
 
