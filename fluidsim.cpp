@@ -1,9 +1,14 @@
 // Fluid simulation based on Stam's 2003 paper
 // Graphics, UI implemented and some important routine changes
+
+// To do: fix density boundary issues
+// Fix framerate (see DELAY_LENGTH below)
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <iostream>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 typedef std::vector<float> vfloat;
 
@@ -11,18 +16,20 @@ typedef std::vector<float> vfloat;
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 800;  // Should match SCREEN_WIDTH
 const int N = 50;               // Grid size
-const int SIM_LEN = 1000;
-const int DELAY_LENGTH = 40;    // ms
+const int SIM_LEN = 3000;       // Based on actual framerate
+
+// Locks framerate at ~64, see stackoverflow.com/q/23258650/3163618
+const std::chrono::milliseconds DELAY_LENGTH(5);
 
 const float VISC = 0.01;
-const float dt = 0.01;
+const float dt = 0.005;
 const float DIFF = 0.01;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
 const bool DRAW_GRID = false; // implement later
 const bool DRAW_VEL = true;
 
-const float MOUSE_DENS = 300.0;
+const float MOUSE_DENS = 100.0;
 
 
 // Code begins here
@@ -235,8 +242,6 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, std
 
     // Render the rect to the screen
     SDL_RenderPresent(renderer);
-
-    SDL_Delay(DELAY_LENGTH);
 }
 
 // Add density (or velocity) based on user input
@@ -296,26 +301,35 @@ int main(int, char **)
     SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); // Background color, should not see this
     SDL_RenderClear(renderer);
 
+    //timeBeginPeriod(1); // Set period to 1ms
+    std::chrono::time_point<std::chrono::system_clock> t_start, t_end;
+    std::chrono::duration<double, std::milli> elapsed_ms;
+
+
+    // Create boundary objects
     for (int i=15; i<=20; i++)
     {
         for (int j=20; j<=30; j++)
             bounds[IX(i,j)] = 1;
     }
 
+    // Main loop
     for (int t=0; t<SIM_LEN; t++)
     {
+        t_start = std::chrono::system_clock::now();
 
         process_input(dens_prev, dens);
 
+        // Add some velocity
         for (int j=2*N/10.0; j<8*N/10.0; j++)
         {
             for (int i=0; i<10; i++)
-                u_prev[IX(i,j)] = 300.0;
+                u_prev[IX(i,j)] = 200.0;
         }
 
-
+        // Add some density
         for (int j=4*N/10.0; j<6*N/10.0;j++)
-            dens_prev[IX(3,j)] = (t<100) ? 10.0 : 0.0;
+            dens_prev[IX(3,j)] = (t<100) ? 100.0 : 0.0;
 
 
         vel_step(u, v, u_prev, v_prev, VISC, dt, bounds);
@@ -332,6 +346,14 @@ int main(int, char **)
         }
 
         screen_draw(renderer, dens, u, v, bounds);
+
+        t_end = std::chrono::system_clock::now();
+        elapsed_ms = t_end - t_start;
+
+        //if (elapsed_ms.count())
+        //    std::cout << "ms: " << elapsed_ms.count() << '\n';
+
+        std::this_thread::sleep_for(DELAY_LENGTH - elapsed_ms);
     }
     SDL_Quit();
     return 0;
