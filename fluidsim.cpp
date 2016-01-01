@@ -16,14 +16,14 @@ typedef std::vector<float> vfloat;
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 800;  // Should match SCREEN_WIDTH
 const int N = 50;               // Grid size
-const int SIM_LEN = 3000;       // Based on actual framerate
+const int SIM_LEN = -1;         // Based on actual framerate
 
 // Locks framerate at ~64, see stackoverflow.com/q/23258650/3163618
 const std::chrono::milliseconds DELAY_LENGTH(5);
 
 const float VISC = 0.01;
 const float dt = 0.005;
-const float DIFF = 0.01;
+const float DIFF = 0.001;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
 const bool DRAW_GRID = false; // implement later
@@ -69,14 +69,16 @@ void set_bnd(const int b, vfloat &x, std::vector<bool> &bound)
                 else if (b==0)
                 {
                     // Distribute density from bound to surrounding cells
-                    int nearby_count = !bound[IX(i+1,j)] + !bound[IX(i-1,j)] + !bound[IX(i,j+1)] + !bound[IX(i,j-1)];
-                    float spread = x[IX(i,j)] / nearby_count;
-                    if (!bound[IX(i+1,j)]) x[IX(i+1,j)] += spread;
-                    if (!bound[IX(i-1,j)]) x[IX(i-1,j)] += spread;
-                    if (!bound[IX(i,j+1)]) x[IX(i,j+1)] += spread;
-                    if (!bound[IX(i,j-1)]) x[IX(i,j-1)] += spread;
+                    int surround = !bound[IX(i+1,j)] + !bound[IX(i-1,j)] + !bound[IX(i,j+1)] + !bound[IX(i,j-1)];
+                    if (surround == 0)
+                        x[IX(i,j)] = 0;
+                    else
+                        x[IX(i,j)] = ((bound[IX(i+1,j)] ? 0 : x[IX(i+1,j)]) +
+                                      (bound[IX(i-1,j)] ? 0 : x[IX(i-1,j)]) +
+                                      (bound[IX(i,j+1)] ? 0 : x[IX(i,j+1)]) +
+                                      (bound[IX(i,j-1)] ? 0 : x[IX(i,j-1)])) / surround;
 
-                    x[IX(i,j)] = 0;
+
                 }
             }
         }
@@ -321,7 +323,7 @@ int main(int, char **)
     }
 
     // Main loop
-    for (int t=0; t<SIM_LEN; t++)
+    for (unsigned int t=0; t<SIM_LEN; t++)
     {
         t_start = std::chrono::system_clock::now();
 
