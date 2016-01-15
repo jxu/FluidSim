@@ -1,3 +1,9 @@
+// GUI for Fluid Simulation
+// Mouse and keyboard functions:
+// Left or right click: add or remove density
+// Left+right click: Add velocity
+// Lshift+left or lshift+right: add or remove boundary cells
+
 // To do: Fix framerate (see DELAY_LENGTH below)
 
 #include "fluidsim.h"
@@ -21,7 +27,7 @@ const float dt = 0.003;
 const float DIFF = 0.005;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
-const bool DRAW_GRID = false; // implement later
+//const bool DRAW_GRID = false;
 const bool DRAW_VEL = true;
 
 const float MOUSE_DENS = 100.0;
@@ -90,7 +96,7 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbo
 }
 
 // Add density (or velocity) based on user input
-void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev)
+void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev, vbool &bound)
 {
     int x, y;
     int *ptr_x = &x, *ptr_y = &y;
@@ -98,51 +104,62 @@ void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_pr
     float r_size = (SCREEN_WIDTH / float(N+2));
 
     SDL_PumpEvents();
-    unsigned int mouse_state = SDL_GetMouseState(ptr_x, ptr_y);
+    const unsigned int mouse_state = SDL_GetMouseState(ptr_x, ptr_y);
+    const Uint8 *kb_state = SDL_GetKeyboardState(NULL);
 
     if (mouse_state & (SDL_BUTTON(SDL_BUTTON_LEFT) | SDL_BUTTON(SDL_BUTTON_RIGHT)))
     {
-        int grid_x = round(x/r_size);
-        int grid_y = N+2 - round(y/r_size);
+        int grid_x = int(x/r_size);
+        int grid_y = N+1 - int(y/r_size);
         bool not_on_edge = (1<=grid_x && grid_x<=N && 1<=grid_y && grid_y<=N);
 
-        if (mouse_state == SDL_BUTTON(SDL_BUTTON_LEFT))
+        if (kb_state[SDL_SCANCODE_LSHIFT])
         {
-            std::cout << "Left ";
-            dens_prev[IX(grid_x,grid_y)] += MOUSE_DENS;
+            if (mouse_state == SDL_BUTTON(SDL_BUTTON_LEFT))
+                bound[IX(grid_x,grid_y)] = true;
+            if (mouse_state == SDL_BUTTON(SDL_BUTTON_RIGHT))
+                bound[IX(grid_x,grid_y)] = false;
         }
-
-        if (mouse_state == SDL_BUTTON(SDL_BUTTON_RIGHT))
+        else
         {
-            std::cout << "Right ";
-            dens[IX(grid_x,grid_y)] = 0.0f;
-            if (not_on_edge)
+            if (mouse_state == SDL_BUTTON(SDL_BUTTON_LEFT))
             {
-                dens[IX(grid_x-1,grid_y)] = 0.0f;
-                dens[IX(grid_x+1,grid_y)] = 0.0f;
-                dens[IX(grid_x,grid_y+1)] = 0.0f;
-                dens[IX(grid_x,grid_y-1)] = 0.0f;
+                //std::cout << "Left ";
+                dens_prev[IX(grid_x,grid_y)] += MOUSE_DENS;
             }
-        }
 
-        if (mouse_state == (SDL_BUTTON(SDL_BUTTON_LEFT) | SDL_BUTTON(SDL_BUTTON_RIGHT)))
-        {
-            std::cout << "Left+Right ";
-            if (not_on_edge)
+            if (mouse_state == SDL_BUTTON(SDL_BUTTON_RIGHT))
             {
-                for (int i=grid_x-1; i<=grid_x+1; i++)
+                //std::cout << "Right ";
+                if (not_on_edge)
                 {
-                    v_prev[IX(i,grid_y+1)] -= MOUSE_VEL;
-                    v_prev[IX(i,grid_y-1)] += MOUSE_VEL;
-                }
-                for (int j=grid_y-1; j<=grid_y+1; j++)
-                {
-                    u_prev[IX(grid_x+1,j)] += MOUSE_VEL;
-                    u_prev[IX(grid_x-1,j)] -= MOUSE_VEL;
+                    dens[IX(grid_x,grid_y)] = 0.0f;
+                    dens[IX(grid_x-1,grid_y)] = 0.0f;
+                    dens[IX(grid_x+1,grid_y)] = 0.0f;
+                    dens[IX(grid_x,grid_y+1)] = 0.0f;
+                    dens[IX(grid_x,grid_y-1)] = 0.0f;
                 }
             }
+
+            if (mouse_state == (SDL_BUTTON(SDL_BUTTON_LEFT) | SDL_BUTTON(SDL_BUTTON_RIGHT)))
+            {
+                //std::cout << "Left+Right ";
+                if (not_on_edge)
+                {
+                    for (int i=grid_x-1; i<=grid_x+1; i++)
+                    {
+                        v_prev[IX(i,grid_y+1)] -= MOUSE_VEL;
+                        v_prev[IX(i,grid_y-1)] += MOUSE_VEL;
+                    }
+                    for (int j=grid_y-1; j<=grid_y+1; j++)
+                    {
+                        u_prev[IX(grid_x+1,j)] += MOUSE_VEL;
+                        u_prev[IX(grid_x-1,j)] -= MOUSE_VEL;
+                    }
+                }
+            }
         }
-        std::cout << "mouse: " << x << ' ' << y << '|' << grid_x << ' ' << grid_y << std::endl;
+        //std::cout << "mouse: " << x << ' ' << y << '|' << grid_x << ' ' << grid_y << std::endl;
     }
 }
 
@@ -187,7 +204,7 @@ int main(int, char **)
     {
         t_start = std::chrono::system_clock::now();
 
-        process_input(dens_prev, dens, u_prev, v_prev);
+        process_input(dens_prev, dens, u_prev, v_prev, bound);
 
         // Add some velocity
         for (int j=2*N/10.0; j<8*N/10.0; j++)
