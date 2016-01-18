@@ -19,8 +19,8 @@ const int SCREEN_HEIGHT = 800;  // Should match SCREEN_WIDTH
 const int N = 50;               // Grid size
 const int SIM_LEN = -1;         // Based on actual framerate
 
-// Locks framerate at ~64, see stackoverflow.com/q/23258650/3163618
-const std::chrono::milliseconds DELAY_LENGTH(5);
+// Locks framerate at ~100, see stackoverflow.com/q/23258650/3163618
+const std::chrono::milliseconds DELAY_LENGTH(10);
 
 const float VISC = 0.01;
 const float dt = 0.003;
@@ -31,7 +31,7 @@ const bool DISPLAY_CONSOLE = false; // Console or graphics
 const bool DRAW_VEL = true;
 
 const float MOUSE_DENS = 100.0;
-const float MOUSE_VEL = 300.0;
+const float MOUSE_VEL = 800.0;
 
 const int nsize = (N+2)*(N+2);
 
@@ -49,7 +49,7 @@ void console_write(vfloat &x)
 
 void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbool &bound)
 {
-    const float r_size = (SCREEN_WIDTH / float(N+2));
+    const float r_size = SCREEN_WIDTH / float(N+2);
     for (int i=0; i<=N+1; i++)
     {
         for (int j=0; j<=N+1; j++)
@@ -85,7 +85,7 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbo
                 int x1 = round((i+0.5)*r_size);
                 int y1 = round((N+1-j+0.5)*r_size);
                 int x2 = x1 + r_size*u[IX(i,j)];
-                int y2 = y1 + r_size*v[IX(i,j)];
+                int y2 = y1 - r_size*v[IX(i,j)];
                 SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
             }
         }
@@ -107,10 +107,12 @@ void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_pr
     const unsigned int mouse_state = SDL_GetMouseState(ptr_x, ptr_y);
     const Uint8 *kb_state = SDL_GetKeyboardState(NULL);
 
+    int grid_x = int(x/r_size);
+    int grid_y = N+1 - int(y/r_size);
+
     if (mouse_state & (SDL_BUTTON(SDL_BUTTON_LEFT) | SDL_BUTTON(SDL_BUTTON_RIGHT)))
     {
-        int grid_x = int(x/r_size);
-        int grid_y = N+1 - int(y/r_size);
+
         bool not_on_edge = (1<=grid_x && grid_x<=N && 1<=grid_y && grid_y<=N);
 
         if (kb_state[SDL_SCANCODE_LSHIFT])
@@ -133,34 +135,21 @@ void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_pr
                 //std::cout << "Right ";
                 if (not_on_edge)
                 {
-                    dens[IX(grid_x,grid_y)] = 0.0f;
+                    dens[IX(grid_x,grid_y)]   = 0.0f;
                     dens[IX(grid_x-1,grid_y)] = 0.0f;
                     dens[IX(grid_x+1,grid_y)] = 0.0f;
                     dens[IX(grid_x,grid_y+1)] = 0.0f;
                     dens[IX(grid_x,grid_y-1)] = 0.0f;
                 }
             }
-
-            if (mouse_state == (SDL_BUTTON(SDL_BUTTON_LEFT) | SDL_BUTTON(SDL_BUTTON_RIGHT)))
-            {
-                //std::cout << "Left+Right ";
-                if (not_on_edge)
-                {
-                    for (int i=grid_x-1; i<=grid_x+1; i++)
-                    {
-                        v_prev[IX(i,grid_y+1)] -= MOUSE_VEL;
-                        v_prev[IX(i,grid_y-1)] += MOUSE_VEL;
-                    }
-                    for (int j=grid_y-1; j<=grid_y+1; j++)
-                    {
-                        u_prev[IX(grid_x+1,j)] += MOUSE_VEL;
-                        u_prev[IX(grid_x-1,j)] -= MOUSE_VEL;
-                    }
-                }
-            }
         }
         //std::cout << "mouse: " << x << ' ' << y << '|' << grid_x << ' ' << grid_y << std::endl;
     }
+
+    if (kb_state[SDL_SCANCODE_LEFT])    u_prev[IX(grid_x,grid_y)] -= MOUSE_VEL;
+    if (kb_state[SDL_SCANCODE_RIGHT])   u_prev[IX(grid_x,grid_y)] += MOUSE_VEL;
+    if (kb_state[SDL_SCANCODE_UP])      v_prev[IX(grid_x,grid_y)] += MOUSE_VEL;
+    if (kb_state[SDL_SCANCODE_DOWN])    v_prev[IX(grid_x,grid_y)] -= MOUSE_VEL;
 }
 
 int main(int, char **)
