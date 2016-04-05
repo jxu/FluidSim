@@ -25,7 +25,7 @@ int SIM_LEN = -1;           // Based on actual framerate
 const std::chrono::milliseconds DELAY_LENGTH(10);
 
 float VISC = 0.02;
-float dt = 0.01;
+float dt = 0.02;
 float DIFF = 0.01;
 
 // Flags
@@ -246,7 +246,7 @@ int main(int argc, char **argv)
     }
 
     // Main loop
-    for (unsigned int t=0; t< unsigned(SIM_LEN); t++)
+    for (unsigned int t=0; t < unsigned(SIM_LEN); t++)
     {
         t_start = std::chrono::system_clock::now();
 
