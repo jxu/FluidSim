@@ -12,8 +12,9 @@
 #include <stdio.h>
 #include <chrono>
 #include <thread>
+#include <getopt.h>
 
-// Constants
+// Default values
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 800;  // Should match SCREEN_WIDTH
 const int N = 50;               // Grid size
@@ -23,8 +24,8 @@ const int SIM_LEN = -1;         // Based on actual framerate
 const std::chrono::milliseconds DELAY_LENGTH(10);
 
 const float VISC = 0.01;
-const float dt = 0.003;
-const float DIFF = 0.005;
+const float dt = 0.02;
+const float DIFF = 0.01;
 
 const bool DISPLAY_CONSOLE = false; // Console or graphics
 //const bool DRAW_GRID = false;
@@ -73,7 +74,7 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbo
 
             }
             else // Object boundary
-                SDL_SetRenderDrawColor(renderer, 0, 100, 100, 0);
+                SDL_SetRenderDrawColor(renderer, 0, 100, 200, 0);
 
             // Render rect
             SDL_RenderFillRect(renderer, &r);
@@ -182,9 +183,9 @@ int main(int, char **)
 
 
     // Create boundary objects
-    for (int i=15; i<=20; i++)
+    for (int i=20; i<=25; i++)
     {
-        for (int j=24; j<=26; j++)
+        for (int j=20; j<=30; j++)
             bound[IX(i,j)] = 1;
     }
 
