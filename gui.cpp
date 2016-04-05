@@ -13,28 +13,31 @@
 #include <chrono>
 #include <thread>
 #include <getopt.h>
+#include <stdlib.h>
 
 // Default values
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 800;  // Should match SCREEN_WIDTH
-const int N = 50;               // Grid size
-const int SIM_LEN = -1;         // Based on actual framerate
+int SCREEN_WIDTH = 800;
+int SCREEN_HEIGHT = SCREEN_WIDTH;
+int N = 50;                 // Grid size
+int SIM_LEN = -1;           // Based on actual framerate
 
 // Locks framerate at ~100, see stackoverflow.com/q/23258650/3163618
 const std::chrono::milliseconds DELAY_LENGTH(10);
 
-const float VISC = 0.01;
-const float dt = 0.02;
-const float DIFF = 0.01;
+float VISC = 0.02;
+float dt = 0.01;
+float DIFF = 0.01;
 
-const bool DISPLAY_CONSOLE = false; // Console or graphics
+// Flags
+int DISPLAY_CONSOLE = false; // Console or graphics
 //const bool DRAW_GRID = false;
-const bool DRAW_VEL = true;
+int DRAW_VEL = true;
+int DEMO = false;
 
 const float MOUSE_DENS = 100.0;
 const float MOUSE_VEL = 800.0;
 
-const int nsize = (N+2)*(N+2);
+int nsize = (N+2)*(N+2);
 
 
 void console_write(vfloat &x)
@@ -153,8 +156,58 @@ void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_pr
     if (kb_state[SDL_SCANCODE_DOWN])    v_prev[IX(grid_x,grid_y)] -= MOUSE_VEL;
 }
 
-int main(int, char **)
+int main(int argc, char **argv)
 {
+    // Command line input
+    while (true)
+    {
+        static struct option long_options[] =
+        {
+            {"disp-console",    no_argument,        &DISPLAY_CONSOLE,   1},
+            {"no-vel-draw",     no_argument,        &DRAW_VEL,          0},
+            {"demo",            no_argument,        &DEMO,              1},
+            {"screen-size",     required_argument,  0, 'a'},
+            {"N",               required_argument,  0, 'b'},
+
+
+            {0, 0, 0, 0}
+        };
+        int option_index = 0;
+
+        int c = getopt_long(argc, argv, "", long_options, &option_index);
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+        case 0:
+            if (long_options[option_index].flag != 0)
+                break;
+            printf ("option %s", long_options[option_index].name);
+            if (optarg)
+                printf (" with arg %s", optarg);
+            printf ("\n");
+            break;
+
+        case 'a':
+            SCREEN_WIDTH = atoi(optarg);
+            SCREEN_HEIGHT = SCREEN_WIDTH;
+            break;
+
+        case 'b':
+            N = atoi(optarg);
+
+        case '?':
+            break;
+
+        default:
+            abort();
+        }
+    }
+
+
+
+
     static vfloat u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
     static vfloat dens(nsize, 0), dens_prev(nsize, 0);
     static vbool bound(nsize, 0);
@@ -182,11 +235,14 @@ int main(int, char **)
     std::chrono::duration<double, std::milli> elapsed_ms;
 
 
-    // Create boundary objects
-    for (int i=20; i<=25; i++)
+    if (DEMO)
     {
-        for (int j=20; j<=30; j++)
-            bound[IX(i,j)] = 1;
+        // Create boundary objects
+        for (int i=20; i<=25; i++)
+        {
+            for (int j=20; j<=30; j++)
+                bound[IX(i,j)] = 1;
+        }
     }
 
     // Main loop
@@ -196,20 +252,23 @@ int main(int, char **)
 
         process_input(dens_prev, dens, u_prev, v_prev, bound);
 
-        // Add some velocity
-        for (int j=2*N/10.0; j<8*N/10.0; j++)
+        if (DEMO)
         {
-            for (int i=0; i<=5; i++)
-                u_prev[IX(i,j)] = 200.0;
+             // Add some velocity
+            for (int j=2*N/10.0; j<8*N/10.0; j++)
+            {
+                for (int i=0; i<=5; i++)
+                    u_prev[IX(i,j)] = 200.0;
+            }
+
+            for (int i=1*N/10.0; i<9*N/10.0; i++)
+                u_prev[IX(i,10)] = 20.0;
+
+
+            // Add some density
+            for (int j=4*N/10.0; j<6*N/10.0;j++)
+                dens_prev[IX(3,j)] = (t<100) ? 100.0 : 0.0;
         }
-
-        for (int i=1*N/10.0; i<9*N/10.0; i++)
-            u_prev[IX(i,10)] = 20.0;
-
-
-        // Add some density
-        for (int j=4*N/10.0; j<6*N/10.0;j++)
-            dens_prev[IX(3,j)] = (t<100) ? 100.0 : 0.0;
 
 
         vel_step(u, v, u_prev, v_prev, VISC, dt, bound);

@@ -9,7 +9,7 @@
 typedef std::vector<float> vfloat;
 typedef std::vector<bool> vbool;
 
-extern const int N, nsize;
+extern int N, nsize;
 
 inline int IX(int i, int j){return i + (N+2)*j;}
 
