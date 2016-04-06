@@ -29,13 +29,13 @@ float dt = 0.02;
 float DIFF = 0.01;
 
 // Flags
-int DISPLAY_CONSOLE = false; // Console or graphics
+int DISPLAY_CONSOLE = false; // Console graphics
 //const bool DRAW_GRID = false;
 int DRAW_VEL = true;
 int DEMO = false;
 
-const float MOUSE_DENS = 100.0;
-const float MOUSE_VEL = 800.0;
+float MOUSE_DENS = 100.0;
+float MOUSE_VEL = 800.0;
 
 int nsize = (N+2)*(N+2);
 
@@ -158,23 +158,28 @@ void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_pr
 
 int main(int argc, char **argv)
 {
-    // Command line input
+    // Command line input options
     while (true)
     {
         static struct option long_options[] =
         {
             {"disp-console",    no_argument,        &DISPLAY_CONSOLE,   1},
             {"no-vel-draw",     no_argument,        &DRAW_VEL,          0},
+            {"vel-draw",        no_argument,        &DRAW_VEL,          1},
             {"demo",            no_argument,        &DEMO,              1},
-            {"screen-size",     required_argument,  0, 'a'},
-            {"N",               required_argument,  0, 'b'},
-
-
+            {"screen-size",     required_argument,  0, 's'},
+            {"N",               required_argument,  0, 'N'},
+            {"sim-len",         required_argument,  0, 'l'},
+            {"visc",            required_argument,  0, 'v'},
+            {"dt",              required_argument,  0, 't'},
+            {"diff",            required_argument,  0, 'd'},
+            {"mouse-dens",      required_argument,  0, 'm'},
+            {"mouse-vel",       required_argument,  0, 'M'},
             {0, 0, 0, 0}
         };
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "", long_options, &option_index);
+        int c = getopt_long(argc, argv, "s:N:l:v:t:d:m:M:", long_options, &option_index);
         if (c == -1)
             break;
 
@@ -189,13 +194,38 @@ int main(int argc, char **argv)
             printf ("\n");
             break;
 
-        case 'a':
+        case 's':
             SCREEN_WIDTH = atoi(optarg);
             SCREEN_HEIGHT = SCREEN_WIDTH;
             break;
 
-        case 'b':
+        case 'N':
             N = atoi(optarg);
+            break;
+
+        case 'l':
+            SIM_LEN = atoi(optarg);
+            break;
+
+        case 'v':
+            VISC = atoi(optarg);
+            break;
+
+        case 't':
+            dt = atoi(optarg);
+            break;
+
+        case 'd':
+            DIFF = atoi(optarg);
+            break;
+
+        case 'm':
+            MOUSE_DENS = atoi(optarg);
+            break;
+
+        case 'M':
+            MOUSE_VEL = atoi(optarg);
+            break;
 
         case '?':
             break;
@@ -204,9 +234,6 @@ int main(int argc, char **argv)
             abort();
         }
     }
-
-
-
 
     static vfloat u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
     static vfloat dens(nsize, 0), dens_prev(nsize, 0);

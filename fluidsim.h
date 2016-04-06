@@ -13,7 +13,7 @@ extern int N, nsize;
 
 inline int IX(int i, int j){return i + (N+2)*j;}
 
-// bound (currently a box with solid walls)
+// Set boundaries
 void set_bnd(const int b, vfloat &x, vbool &bound)
 {
     for (int i=1; i<=N; i++)
