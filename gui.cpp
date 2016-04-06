@@ -37,8 +37,7 @@ int DEMO = false;
 float MOUSE_DENS = 100.0;
 float MOUSE_VEL = 800.0;
 
-int nsize = (N+2)*(N+2);
-
+int nsize;
 
 void console_write(vfloat &x)
 {
@@ -168,7 +167,7 @@ int main(int argc, char **argv)
             {"vel-draw",        no_argument,        &DRAW_VEL,          1},
             {"demo",            no_argument,        &DEMO,              1},
             {"screen-size",     required_argument,  0, 's'},
-            {"N",               required_argument,  0, 'N'},
+            {"grid",            required_argument,  0, 'N'},
             {"sim-len",         required_argument,  0, 'l'},
             {"visc",            required_argument,  0, 'v'},
             {"dt",              required_argument,  0, 't'},
@@ -196,10 +195,10 @@ int main(int argc, char **argv)
 
         case 's':
             SCREEN_WIDTH = atoi(optarg);
-            SCREEN_HEIGHT = SCREEN_WIDTH;
             break;
 
         case 'N':
+            std::cout << "test" << std::endl;
             N = atoi(optarg);
             break;
 
@@ -234,6 +233,9 @@ int main(int argc, char **argv)
             abort();
         }
     }
+
+    nsize = (N+2)*(N+2);
+    SCREEN_HEIGHT = SCREEN_WIDTH;
 
     static vfloat u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
     static vfloat dens(nsize, 0), dens_prev(nsize, 0);
