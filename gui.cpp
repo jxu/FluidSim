@@ -32,7 +32,8 @@ float DIFF = 0.01;
 int DISPLAY_CONSOLE = false; // Console graphics
 //const bool DRAW_GRID = false;
 int DRAW_VEL = true;
-int DEMO = false;
+int DEMO = 0;
+
 
 float MOUSE_DENS = 100.0;
 float MOUSE_VEL = 800.0;
@@ -159,6 +160,7 @@ int main(int argc, char **argv)
             {"no-vel-draw",     no_argument,        &DRAW_VEL,          0},
             {"vel-draw",        no_argument,        &DRAW_VEL,          1},
             {"demo",            no_argument,        &DEMO,              1},
+            {"demo2",           no_argument,        &DEMO,              2},
             {"screen-size",     required_argument,  0, 's'},
             {"grid",            required_argument,  0, 'N'},
             {"sim-len",         required_argument,  0, 'l'},
@@ -256,7 +258,7 @@ int main(int argc, char **argv)
     std::chrono::duration<double, std::milli> elapsed_ms;
 
 
-    if (DEMO)
+    if (DEMO==1)
     {
         if (N<50)
             std::cout << "N too small for demo!" << std::endl;
@@ -281,7 +283,7 @@ int main(int argc, char **argv)
 
         process_input(dens_prev, dens, u_prev, v_prev, bound);
 
-        if (DEMO)
+        if (DEMO==1)
         {
              // Add some velocity
             for (int j=2*N/10.0; j<8*N/10.0; j++)
