@@ -17,7 +17,7 @@
 
 // Default values
 int SCREEN_WIDTH = 800;
-int SCREEN_HEIGHT = SCREEN_WIDTH;
+int SCREEN_HEIGHT;
 int N = 50;                 // Grid size
 int SIM_LEN = -1;           // Based on actual framerate
 
@@ -65,15 +65,8 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbo
 
             if (bound[IX(i,j)] == 0)
             {
-                //if (dens[IX(i,j)] < 2.0)
-                {
-                    int color = std::min(int(dens[IX(i,j)] * 255), 255);
-                    SDL_SetRenderDrawColor(renderer, color, color, color, 0);
-                }
-                //else // Negative density (error)
-                //    SDL_SetRenderDrawColor(renderer, 255, 200, 255, 0);
-
-
+                int color = std::min(int(dens[IX(i,j)] * 255), 255);
+                SDL_SetRenderDrawColor(renderer, color, color, color, 0);
             }
             else // Object boundary
                 SDL_SetRenderDrawColor(renderer, 0, 100, 200, 0);
@@ -198,7 +191,6 @@ int main(int argc, char **argv)
             break;
 
         case 'N':
-            std::cout << "test" << std::endl;
             N = atoi(optarg);
             break;
 
@@ -266,10 +258,18 @@ int main(int argc, char **argv)
 
     if (DEMO)
     {
+        if (N<50)
+            std::cout << "N too small for demo!" << std::endl;
         // Create boundary objects
         for (int i=20; i<=25; i++)
         {
-            for (int j=20; j<=30; j++)
+            for (int j=4; j<=30; j++)
+                bound[IX(i,j)] = 1;
+        }
+
+        for (int i=20; i<=40; i++)
+        {
+            for (int j=4; j<=6; j++)
                 bound[IX(i,j)] = 1;
         }
     }
@@ -290,13 +290,19 @@ int main(int argc, char **argv)
                     u_prev[IX(i,j)] = 200.0;
             }
 
+            for (int i=20; i<=40; i++)
+            {
+                for (int j=1; j<4; j++)
+                    u_prev[IX(i,j)] = 30.0;
+            }
+
             for (int i=1*N/10.0; i<9*N/10.0; i++)
                 u_prev[IX(i,10)] = 20.0;
 
 
             // Add some density
             for (int j=4*N/10.0; j<6*N/10.0;j++)
-                dens_prev[IX(3,j)] = (t<100) ? 100.0 : 0.0;
+                dens_prev[IX(3,j)] = (t<200) ? 100.0 : 0.0;
         }
 
 
