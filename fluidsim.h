@@ -18,11 +18,14 @@ struct bound_t
     int b;
     int walls;
     vbool bound;
-};
+} bi;
 
 // Set boundaries
-void set_bnd(const int b, vfloat &x, vbool &bound)
+void set_bnd(bound_t &bi, vfloat &x)
 {
+    int b = bi.b, walls = bi.walls;
+    vbool &bound = bi.bound;
+
     for (int i=1; i<=N; i++)
     {
         x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : x[IX(1,i)];
@@ -64,7 +67,7 @@ void set_bnd(const int b, vfloat &x, vbool &bound)
     }
 }
 
-inline void lin_solve(int b, vfloat &x, const vfloat &x0, float a, float c, vbool &bound)
+inline void lin_solve(bound_t &bi, vfloat &x, const vfloat &x0, float a, float c)
 {
     for (int k=0; k<20; k++)
     {
@@ -74,7 +77,7 @@ inline void lin_solve(int b, vfloat &x, const vfloat &x0, float a, float c, vboo
                 x[IX(i,j)] = (x0[IX(i,j)] +
                               a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)])) / c;
         }
-        set_bnd (b, x, bound);
+        set_bnd(bi, x);
     }
 }
 
@@ -85,14 +88,14 @@ void add_source(vfloat &x, const vfloat &s, float dt)
 }
 
 // Diffusion with Gauss-Seidel relaxation
-void diffuse(int b, vfloat &x, const vfloat &x0, float diff, float dt, vbool &bound)
+void diffuse(bound_t &bi, vfloat &x, const vfloat &x0, float diff, float dt)
 {
     float a = dt*diff*N*N;
-    lin_solve(b, x, x0, a, 1+4*a+dt, bound); // Amazing fix due to Iwillnotexist Idonotexist
+    lin_solve(bi, x, x0, a, 1+4*a+dt); // Amazing fix due to Iwillnotexist Idonotexist
 }
 
 // Backwards advection
-void advect(int b, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v, float dt, vbool &bound)
+void advect(bound_t &bi, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v, float dt)
 {
     float dt0 = dt*N;
     for (int i=1; i<=N; i++)
@@ -111,11 +114,11 @@ void advect(int b, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v
                          s1*(t0*d0[IX(i1,j0)] + t1*d0[IX(i1,j1)]);
         }
     }
-    set_bnd(b, d, bound);
+    set_bnd(bi, d);
 }
 
 // Force velocity to be mass-conserving (Poisson equation black magic)
-void project(vfloat &u, vfloat &v, vfloat &p, vfloat &div, vbool bound)
+void project(bound_t &bi, vfloat &u, vfloat &v, vfloat &p, vfloat &div)
 {
     float h = 1.0/N;
     for (int i=1; i<=N; i++)
@@ -127,9 +130,10 @@ void project(vfloat &u, vfloat &v, vfloat &p, vfloat &div, vbool bound)
             p[IX(i,j)] = 0;
         }
     }
-    set_bnd(0, div, bound); set_bnd(0, p, bound);
+    bi.b = 0;
+    set_bnd(bi, div); set_bnd(bi, p);
 
-    lin_solve(0, p, div, 1, 4, bound);
+    lin_solve(bi, p, div, 1, 4);
 
     for (int i=1; i<=N; i++)
     {
@@ -139,25 +143,28 @@ void project(vfloat &u, vfloat &v, vfloat &p, vfloat &div, vbool bound)
             v[IX(i,j)] -= 0.5*(p[IX(i,j+1)] - p[IX(i,j-1)])/h;
         }
     }
-    set_bnd(1, u, bound); set_bnd(2, v, bound);
+    bi.b = 1; set_bnd(bi, u);
+    bi.b = 2; set_bnd(bi, v);
 }
 
 // Density solver
-void dens_step(vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float diff, float dt, vbool &bound)
+void dens_step(bound_t &bi, vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float diff, float dt)
 {
     add_source(x, x0, dt);
-    swap(x0, x); diffuse(0, x, x0, diff, dt, bound);
-    swap(x0, x); advect(0, x, x0, u, v, dt, bound);
+    bi.b = 0;
+    swap(x0, x); diffuse(bi, x, x0, diff, dt);
+    swap(x0, x); advect(bi, x, x0, u, v, dt);
 }
 
 // Velocity solver: addition of forces, viscous diffusion, self-advection
-void vel_step(vfloat &u, vfloat &v, vfloat &u0, vfloat &v0, float visc, float dt, vbool &bound)
+void vel_step(bound_t &bi, vfloat &u, vfloat &v, vfloat &u0, vfloat &v0, float visc, float dt)
 {
     add_source(u, u0, dt); add_source(v, v0, dt);
-    swap(u0, u); diffuse(1, u, u0, visc, dt, bound);
-    swap(v0, v); diffuse(2, v, v0, visc, dt, bound);
-    project(u, v, u0, v0, bound);
+    swap(u0, u); bi.b = 1; diffuse(bi, u, u0, visc, dt);
+    swap(v0, v); bi.b = 2; diffuse(bi, v, v0, visc, dt);
+    project(bi, u, v, u0, v0);
     swap(u0, u); swap(v0, v);
-    advect(1, u, u0, u0, v0, dt, bound); advect(2, v, v0, u0, v0, dt, bound);
-    project(u, v, u0, v0, bound);
+    bi.b = 1; advect(bi, u, u0, u0, v0, dt);
+    bi.b = 2; advect(bi, v, v0, u0, v0, dt);
+    project(bi, u, v, u0, v0);
 }

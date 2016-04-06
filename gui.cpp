@@ -51,8 +51,9 @@ void console_write(vfloat &x)
     std::cout << '\n';
 }
 
-void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbool &bound)
+void screen_draw(bound_t &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v)
 {
+    vbool &bound = bi.bound;
     const float r_size = SCREEN_WIDTH / float(N+2);
     for (int i=0; i<=N+1; i++)
     {
@@ -93,8 +94,9 @@ void screen_draw(SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v, vbo
 }
 
 // Add density (or velocity) based on user input
-void process_input(vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev, vbool &bound)
+void process_input(bound_t &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev)
 {
+    vbool &bound = bi.bound;
     int x, y;
     int *ptr_x = &x, *ptr_y = &y;
 
@@ -231,9 +233,13 @@ int main(int argc, char **argv)
     nsize = (N+2)*(N+2);
     SCREEN_HEIGHT = SCREEN_WIDTH;
 
+    bound_t bi;
+
     static vfloat u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
     static vfloat dens(nsize, 0), dens_prev(nsize, 0);
-    static vbool bound(nsize, 0);
+    static vbool bound_init(nsize, 0);
+    bi.bound = bound_init;
+
     //fill_n(dens_prev, nsize, 0.0);
 
     // SDL initialize
@@ -266,13 +272,13 @@ int main(int argc, char **argv)
         for (int i=20; i<=25; i++)
         {
             for (int j=4; j<=30; j++)
-                bound[IX(i,j)] = 1;
+                bi.bound[IX(i,j)] = 1;
         }
 
         for (int i=20; i<=40; i++)
         {
             for (int j=4; j<=6; j++)
-                bound[IX(i,j)] = 1;
+                bi.bound[IX(i,j)] = 1;
         }
     }
 
@@ -281,7 +287,7 @@ int main(int argc, char **argv)
     {
         t_start = std::chrono::system_clock::now();
 
-        process_input(dens_prev, dens, u_prev, v_prev, bound);
+        process_input(bi, dens_prev, dens, u_prev, v_prev);
 
         if (DEMO==1)
         {
@@ -304,12 +310,12 @@ int main(int argc, char **argv)
 
             // Add some density
             for (int j=4*N/10.0; j<6*N/10.0;j++)
-                dens_prev[IX(3,j)] = (t<400 && (t%40 < 20)) ? 100.0 : 0.0;
+                dens_prev[IX(3,j)] = (t<400 && (t%40 < 30)) ? 50.0 : 0.0;
         }
 
 
-        vel_step(u, v, u_prev, v_prev, VISC, dt, bound);
-        dens_step(dens, dens_prev, u, v, DIFF, dt, bound);
+        vel_step(bi, u, v, u_prev, v_prev, VISC, dt);
+        dens_step(bi, dens, dens_prev, u, v, DIFF, dt);
 
         if (DISPLAY_CONSOLE)
         {
@@ -321,7 +327,7 @@ int main(int argc, char **argv)
             console_write(dens_prev);
         }
 
-        screen_draw(renderer, dens, u, v, bound);
+        screen_draw(bi, renderer, dens, u, v);
 
         t_end = std::chrono::system_clock::now();
         elapsed_ms = t_end - t_start;
