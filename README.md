@@ -1,7 +1,7 @@
 FluidSim
 ========
 Grid-based fluid simulation from approximations of Navier-Stokes equations, based on a paper by Stam. 
-See source code for command line options. Use `--demo` for demo. 
+See source code for command line options. Use `--demo` or `--demo2` for demos. 
 
 Requirements
 ------------

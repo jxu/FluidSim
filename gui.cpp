@@ -224,7 +224,7 @@ int main(int argc, char **argv)
             break;
 
         default:
-            abort();
+            std::cout << "Flag case error!" << std::endl;
         }
     }
 
@@ -304,7 +304,7 @@ int main(int argc, char **argv)
 
             // Add some density
             for (int j=4*N/10.0; j<6*N/10.0;j++)
-                dens_prev[IX(3,j)] = (t<200) ? 100.0 : 0.0;
+                dens_prev[IX(3,j)] = (t<400 && (t%40 < 20)) ? 100.0 : 0.0;
         }
 
 

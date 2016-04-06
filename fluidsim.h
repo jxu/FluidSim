@@ -13,6 +13,13 @@ extern int N, nsize;
 
 inline int IX(int i, int j){return i + (N+2)*j;}
 
+struct bound_t
+{
+    int b;
+    int walls;
+    vbool bound;
+};
+
 // Set boundaries
 void set_bnd(const int b, vfloat &x, vbool &bound)
 {
