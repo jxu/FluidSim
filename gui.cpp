@@ -18,8 +18,8 @@
 // Default values
 int SCREEN_WIDTH = 800;
 int SCREEN_HEIGHT;
-int N = 50;                 // Grid size
-int SIM_LEN = -1;           // Based on actual framerate
+int N = 50;                     // Grid size
+int SIM_LEN = -1;               // Based on actual framerate
 
 // Locks framerate at ~?, see stackoverflow.com/q/23258650/3163618
 const std::chrono::milliseconds DELAY_LENGTH(5);
@@ -29,11 +29,11 @@ float dt = 0.02;
 float DIFF = 0.01;
 
 // Flags
-int DISPLAY_CONSOLE = false; // Console graphics
+int DISPLAY_CONSOLE = false;    // Console graphics
 //const bool DRAW_GRID = false;
 int DRAW_VEL = true;
 int DEMO = 0;
-
+int WALLS = 15;                 // Default all walls
 
 float MOUSE_DENS = 100.0;
 float MOUSE_VEL = 800.0;
@@ -155,6 +155,7 @@ void demo_bound(bound_t &bi)
 {
     if (DEMO==1)
     {
+        bi.walls = 15;
         if (N<50)
             std::cout << "N too small for demo!" << std::endl;
         // Create boundary objects
@@ -280,13 +281,13 @@ int main(int argc, char **argv)
 
     nsize = (N+2)*(N+2);
     SCREEN_HEIGHT = SCREEN_WIDTH;
-
     bound_t bi;
 
     static vfloat u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
     static vfloat dens(nsize, 0), dens_prev(nsize, 0);
     static vbool bound_init(nsize, 0);
     bi.bound = bound_init;
+    bi.walls = WALLS;
 
     //fill_n(dens_prev, nsize, 0.0);
 

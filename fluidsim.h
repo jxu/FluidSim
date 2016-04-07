@@ -16,22 +16,26 @@ inline int IX(int i, int j){return i + (N+2)*j;}
 struct bound_t
 {
     int b;
-    int walls;
+    int walls; // bitmask
     vbool bound;
 } bi;
 
 // Set boundaries
 void set_bnd(bound_t &bi, vfloat &x)
 {
-    int b = bi.b, walls = bi.walls;
+    const int b = bi.b, w = bi.walls;
     vbool &bound = bi.bound;
 
     for (int i=1; i<=N; i++)
     {
-        x[IX(0  ,i)] = b==1 ? -x[IX(1,i)] : x[IX(1,i)];
-        x[IX(N+1,i)] = b==1 ? -x[IX(N,i)] : x[IX(N,i)];
-        x[IX(i,  0)] = b==2 ? -x[IX(i,1)] : x[IX(i,1)];
-        x[IX(i,N+1)] = b==2 ? -x[IX(i,N)] : x[IX(i,N)];
+        x[IX(0  ,i)] = (!(w&8)) ? 0 :
+                       b==1 ? -x[IX(1,i)] : x[IX(1,i)];
+        x[IX(N+1,i)] = (!(w&2)) ? 0 :
+                       b==1 ? -x[IX(N,i)] : x[IX(N,i)];
+        x[IX(i,  0)] = (!(w&4)) ? 0 :
+                       b==2 ? -x[IX(i,1)] : x[IX(i,1)];
+        x[IX(i,N+1)] = (!(w&1)) ? 0 :
+                       b==2 ? -x[IX(i,N)] : x[IX(i,N)];
     }
 
     x[IX(0  ,0  )] = 0.5*(x[IX(1,0  )] + x[IX(0  ,1)]);
