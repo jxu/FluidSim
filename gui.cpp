@@ -21,8 +21,8 @@ int SCREEN_HEIGHT;
 int N = 50;                 // Grid size
 int SIM_LEN = -1;           // Based on actual framerate
 
-// Locks framerate at ~100, see stackoverflow.com/q/23258650/3163618
-const std::chrono::milliseconds DELAY_LENGTH(10);
+// Locks framerate at ~?, see stackoverflow.com/q/23258650/3163618
+const std::chrono::milliseconds DELAY_LENGTH(5);
 
 float VISC = 0.02;
 float dt = 0.02;
@@ -151,6 +151,54 @@ void process_input(bound_t &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev,
     if (kb_state[SDL_SCANCODE_DOWN])    v_prev[IX(grid_x,grid_y)] -= MOUSE_VEL;
 }
 
+void demo_bound(bound_t &bi)
+{
+    if (DEMO==1)
+    {
+        if (N<50)
+            std::cout << "N too small for demo!" << std::endl;
+        // Create boundary objects
+        for (int i=20; i<=25; i++)
+        {
+            for (int j=4; j<=30; j++)
+                bi.bound[IX(i,j)] = 1;
+        }
+
+        for (int i=20; i<=40; i++)
+        {
+            for (int j=4; j<=6; j++)
+                bi.bound[IX(i,j)] = 1;
+        }
+    }
+}
+
+void demo_loop(vfloat &dens_prev, vfloat &u_prev, vfloat &v_prev, int t)
+{
+    if (DEMO==1)
+    {
+         // Add some velocity
+        for (int j=2*N/10.0; j<8*N/10.0; j++)
+        {
+            for (int i=0; i<=5; i++)
+                u_prev[IX(i,j)] = 200.0;
+        }
+
+        for (int i=20; i<=40; i++)
+        {
+            for (int j=1; j<4; j++)
+                u_prev[IX(i,j)] = 30.0;
+        }
+
+        for (int i=1*N/10.0; i<9*N/10.0; i++)
+            u_prev[IX(i,10)] = 20.0;
+
+
+        // Add some density
+        for (int j=4*N/10.0; j<6*N/10.0;j++)
+            dens_prev[IX(3,j)] = (t<400 && (t%40 < 30)) ? 50.0 : 0.0;
+    }
+}
+
 int main(int argc, char **argv)
 {
     // Command line input options
@@ -263,24 +311,7 @@ int main(int argc, char **argv)
     std::chrono::time_point<std::chrono::system_clock> t_start, t_end;
     std::chrono::duration<double, std::milli> elapsed_ms;
 
-
-    if (DEMO==1)
-    {
-        if (N<50)
-            std::cout << "N too small for demo!" << std::endl;
-        // Create boundary objects
-        for (int i=20; i<=25; i++)
-        {
-            for (int j=4; j<=30; j++)
-                bi.bound[IX(i,j)] = 1;
-        }
-
-        for (int i=20; i<=40; i++)
-        {
-            for (int j=4; j<=6; j++)
-                bi.bound[IX(i,j)] = 1;
-        }
-    }
+    demo_bound(bi);
 
     // Main loop
     for (unsigned int t=0; t < unsigned(SIM_LEN); t++)
@@ -289,30 +320,7 @@ int main(int argc, char **argv)
 
         process_input(bi, dens_prev, dens, u_prev, v_prev);
 
-        if (DEMO==1)
-        {
-             // Add some velocity
-            for (int j=2*N/10.0; j<8*N/10.0; j++)
-            {
-                for (int i=0; i<=5; i++)
-                    u_prev[IX(i,j)] = 200.0;
-            }
-
-            for (int i=20; i<=40; i++)
-            {
-                for (int j=1; j<4; j++)
-                    u_prev[IX(i,j)] = 30.0;
-            }
-
-            for (int i=1*N/10.0; i<9*N/10.0; i++)
-                u_prev[IX(i,10)] = 20.0;
-
-
-            // Add some density
-            for (int j=4*N/10.0; j<6*N/10.0;j++)
-                dens_prev[IX(3,j)] = (t<400 && (t%40 < 30)) ? 50.0 : 0.0;
-        }
-
+        demo_loop(dens_prev, u_prev, v_prev, t);
 
         vel_step(bi, u, v, u_prev, v_prev, VISC, dt);
         dens_step(bi, dens, dens_prev, u, v, DIFF, dt);
