@@ -24,7 +24,7 @@ int SIM_LEN = -1;               // Based on actual framerate
 // Locks framerate at ~?, see stackoverflow.com/q/23258650/3163618
 const std::chrono::milliseconds DELAY_LENGTH(5);
 
-float VISC = 0.02;
+float VISC = 0.001;
 float dt = 0.02;
 float DIFF = 0.01;
 
@@ -156,20 +156,28 @@ void demo_bound(bound_t &bi)
     if (DEMO==1)
     {
         bi.walls = 15;
+        VISC = 0.005;
         if (N<50)
             std::cout << "N too small for demo!" << std::endl;
         // Create boundary objects
         for (int i=20; i<=25; i++)
-        {
             for (int j=4; j<=30; j++)
                 bi.bound[IX(i,j)] = 1;
-        }
 
         for (int i=20; i<=40; i++)
-        {
             for (int j=4; j<=6; j++)
                 bi.bound[IX(i,j)] = 1;
-        }
+    }
+
+    if (DEMO==2)
+    {
+        bi.walls = 10;
+        VISC = 0.0001;
+        DIFF = 0.001;
+        for (int i=1; i<=N; i++)
+            for (int j=1; j<=N; j++)
+                if ((i-51)*(i-51) + (j-35)*(j-35) <= 90)
+                    bi.bound[IX(i,j)] = 1;
     }
 }
 
@@ -179,16 +187,12 @@ void demo_loop(vfloat &dens_prev, vfloat &u_prev, vfloat &v_prev, int t)
     {
          // Add some velocity
         for (int j=2*N/10.0; j<8*N/10.0; j++)
-        {
             for (int i=0; i<=5; i++)
                 u_prev[IX(i,j)] = 200.0;
-        }
 
         for (int i=20; i<=40; i++)
-        {
             for (int j=1; j<4; j++)
                 u_prev[IX(i,j)] = 30.0;
-        }
 
         for (int i=1*N/10.0; i<9*N/10.0; i++)
             u_prev[IX(i,10)] = 20.0;
@@ -198,6 +202,25 @@ void demo_loop(vfloat &dens_prev, vfloat &u_prev, vfloat &v_prev, int t)
         for (int j=4*N/10.0; j<6*N/10.0;j++)
             dens_prev[IX(3,j)] = (t<400 && (t%40 < 30)) ? 50.0 : 0.0;
     }
+
+    if (DEMO==2)
+    {
+        for (int i=51-10; i<=51+10; i++)
+            for (int j=0; j<=5; j++)
+                v_prev[IX(i,j)] = 100.0;
+
+        for (int i=51-2; i<=51+2; i++)
+            for (int j=1; j<=3; j++)
+                dens_prev[IX(i,j)] = 300.0;
+    }
+}
+
+void demo_init_nsize()
+{
+    if (DEMO==2)
+        N = 100;
+
+    nsize = (N+2)*(N+2);
 }
 
 int main(int argc, char **argv)
@@ -254,6 +277,7 @@ int main(int argc, char **argv)
         }
     }
 
+    demo_init_nsize();
     nsize = (N+2)*(N+2);
     SCREEN_HEIGHT = SCREEN_WIDTH;
     bound_t bi;
