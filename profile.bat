@@ -1,0 +1,1 @@
+gprof bin/Debug/FluidSim.exe gmon.out > gprof.txt
