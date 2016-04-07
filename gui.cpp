@@ -220,11 +220,12 @@ int main(int argc, char **argv)
             {"diff",            required_argument,  0, 'd'},
             {"mouse-dens",      required_argument,  0, 'm'},
             {"mouse-vel",       required_argument,  0, 'M'},
+            {"walls",           required_argument,  0, 'w'},
             {0, 0, 0, 0}
         };
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "s:N:l:v:t:d:m:M:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "s:N:l:v:t:d:m:M:w:", long_options, &option_index);
         if (c == -1)
             break;
 
@@ -239,43 +240,17 @@ int main(int argc, char **argv)
             printf ("\n");
             break;
 
-        case 's':
-            SCREEN_WIDTH = atoi(optarg);
-            break;
-
-        case 'N':
-            N = atoi(optarg);
-            break;
-
-        case 'l':
-            SIM_LEN = atoi(optarg);
-            break;
-
-        case 'v':
-            VISC = atoi(optarg);
-            break;
-
-        case 't':
-            dt = atoi(optarg);
-            break;
-
-        case 'd':
-            DIFF = atoi(optarg);
-            break;
-
-        case 'm':
-            MOUSE_DENS = atoi(optarg);
-            break;
-
-        case 'M':
-            MOUSE_VEL = atoi(optarg);
-            break;
-
-        case '?':
-            break;
-
-        default:
-            std::cout << "Flag case error!" << std::endl;
+        case 's': SCREEN_WIDTH  = atoi(optarg); break;
+        case 'N': N             = atoi(optarg); break;
+        case 'l': SIM_LEN       = atoi(optarg); break;
+        case 'v': VISC          = atoi(optarg); break;
+        case 't': dt            = atoi(optarg); break;
+        case 'd': DIFF          = atoi(optarg); break;
+        case 'm': MOUSE_DENS    = atoi(optarg); break;
+        case 'M': MOUSE_VEL     = atoi(optarg); break;
+        case 'w': WALLS         = atoi(optarg); break;
+        case '?':                               break;
+        default: std::cout << "Flag case error!" << std::endl;
         }
     }
 
