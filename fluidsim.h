@@ -13,7 +13,7 @@ extern int N, nsize;
 
 inline int IX(int i, int j){return i + (N+2)*j;}
 
-struct bound_t
+struct Bound
 {
     int b;
     int walls; // bitmask
@@ -21,7 +21,7 @@ struct bound_t
 } bi;
 
 // Set boundaries
-void set_bnd(bound_t &bi, vfloat &x)
+void set_bnd(Bound &bi, vfloat &x)
 {
     const int b = bi.b, w = bi.walls;
     vbool &bound = bi.bound;
@@ -71,7 +71,7 @@ void set_bnd(bound_t &bi, vfloat &x)
     }
 }
 
-inline void lin_solve(bound_t &bi, vfloat &x, const vfloat &x0, float a, float c)
+inline void lin_solve(Bound &bi, vfloat &x, const vfloat &x0, float a, float c)
 {
     for (int k=0; k<20; k++)
     {
@@ -92,14 +92,14 @@ void add_source(vfloat &x, const vfloat &s, float dt)
 }
 
 // Diffusion with Gauss-Seidel relaxation
-void diffuse(bound_t &bi, vfloat &x, const vfloat &x0, float diff, float dt)
+void diffuse(Bound &bi, vfloat &x, const vfloat &x0, float diff, float dt)
 {
     float a = dt*diff*N*N;
     lin_solve(bi, x, x0, a, 1+4*a+dt); // Amazing fix due to Iwillnotexist Idonotexist
 }
 
 // Backwards advection
-void advect(bound_t &bi, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v, float dt)
+void advect(Bound &bi, vfloat &d, const vfloat &d0, const vfloat &u, const vfloat &v, float dt)
 {
     float dt0 = dt*N;
     for (int i=1; i<=N; i++)
@@ -122,7 +122,7 @@ void advect(bound_t &bi, vfloat &d, const vfloat &d0, const vfloat &u, const vfl
 }
 
 // Force velocity to be mass-conserving (Poisson equation black magic)
-void project(bound_t &bi, vfloat &u, vfloat &v, vfloat &p, vfloat &div)
+void project(Bound &bi, vfloat &u, vfloat &v, vfloat &p, vfloat &div)
 {
     float h = 1.0/N;
     for (int i=1; i<=N; i++)
@@ -152,7 +152,7 @@ void project(bound_t &bi, vfloat &u, vfloat &v, vfloat &p, vfloat &div)
 }
 
 // Density solver
-void dens_step(bound_t &bi, vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float diff, float dt)
+void dens_step(Bound &bi, vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float diff, float dt)
 {
     add_source(x, x0, dt);
     bi.b = 0;
@@ -161,7 +161,7 @@ void dens_step(bound_t &bi, vfloat &x, vfloat &x0, vfloat &u, vfloat &v, float d
 }
 
 // Velocity solver: addition of forces, viscous diffusion, self-advection
-void vel_step(bound_t &bi, vfloat &u, vfloat &v, vfloat &u0, vfloat &v0, float visc, float dt)
+void vel_step(Bound &bi, vfloat &u, vfloat &v, vfloat &u0, vfloat &v0, float visc, float dt)
 {
     add_source(u, u0, dt); add_source(v, v0, dt);
     swap(u0, u); bi.b = 1; diffuse(bi, u, u0, visc, dt);

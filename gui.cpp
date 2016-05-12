@@ -1,10 +1,12 @@
 // GUI for Fluid Simulation
 // Mouse and keyboard functions:
-// Left or right click: add or remove density
-// Left+right click: Add velocity
-// Lshift+left or lshift+right: add or remove boundary cells
+//   Left or right click: add or remove density
+//   Left+right click: add velocity
+//   Lshift+left or lshift+right: add or remove boundary cells
+//   q: quit nicely
 
-// To do: Fix framerate (see DELAY_LENGTH below)
+// To do: Fix framerate (see DELAY_LENGTH below), cleanup too many parameters?
+
 
 #include "fluidsim.h"
 #include <iostream>
@@ -14,6 +16,7 @@
 #include <thread>
 #include <getopt.h>
 #include <stdlib.h>
+#include <stdexcept>
 
 // Default values
 int SCREEN_WIDTH = 800;
@@ -51,7 +54,7 @@ void console_write(vfloat &x)
     std::cout << '\n';
 }
 
-void screen_draw(bound_t &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v)
+void screen_draw(Bound &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v)
 {
     vbool &bound = bi.bound;
     const float r_size = SCREEN_WIDTH / float(N+2);
@@ -94,7 +97,7 @@ void screen_draw(bound_t &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, v
 }
 
 // Add density (or velocity) based on user input
-void process_input(bound_t &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev)
+void process_input(Bound &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev, bool &exit_flag)
 {
     vbool &bound = bi.bound;
     int x, y;
@@ -149,9 +152,12 @@ void process_input(bound_t &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev,
     if (kb_state[SDL_SCANCODE_RIGHT])   u_prev[IX(grid_x,grid_y)] += MOUSE_VEL;
     if (kb_state[SDL_SCANCODE_UP])      v_prev[IX(grid_x,grid_y)] += MOUSE_VEL;
     if (kb_state[SDL_SCANCODE_DOWN])    v_prev[IX(grid_x,grid_y)] -= MOUSE_VEL;
+
+    if (kb_state[SDL_SCANCODE_Q]) exit_flag = true;
+
 }
 
-void demo_bound(bound_t &bi)
+void demo_bound(Bound &bi)
 {
     if (DEMO==1)
     {
@@ -176,7 +182,7 @@ void demo_bound(bound_t &bi)
         DIFF = 0.001;
         for (int i=1; i<=N; i++)
             for (int j=1; j<=N; j++)
-                if ((i-51)*(i-51) + (j-35)*(j-35) <= 90)
+                if ((i-51)*(i-51) + (j-35)*(j-35) <= 90)  // circle
                     bi.bound[IX(i,j)] = 1;
     }
 }
@@ -278,9 +284,9 @@ int main(int argc, char **argv)
     }
 
     demo_init_nsize();
-    nsize = (N+2)*(N+2);
     SCREEN_HEIGHT = SCREEN_WIDTH;
-    bound_t bi;
+    Bound bi;
+    bool exit_flag = false;
 
     static vfloat u(nsize, 0), v(nsize, 0), u_prev(nsize, 0), v_prev(nsize, 0); // Horizontal, vertical velocity
     static vfloat dens(nsize, 0), dens_prev(nsize, 0);
@@ -318,7 +324,7 @@ int main(int argc, char **argv)
     {
         t_start = std::chrono::system_clock::now();
 
-        process_input(bi, dens_prev, dens, u_prev, v_prev);
+        process_input(bi, dens_prev, dens, u_prev, v_prev, exit_flag);
 
         demo_loop(dens_prev, u_prev, v_prev, t);
 
@@ -344,6 +350,8 @@ int main(int argc, char **argv)
         //    std::cout << "ms: " << elapsed_ms.count() << '\n';
 
         std::this_thread::sleep_for(DELAY_LENGTH - elapsed_ms);
+
+        if (exit_flag) break;
     }
     SDL_Quit();
     return 0;
