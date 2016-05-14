@@ -5,7 +5,7 @@
 //   Lshift+left or lshift+right: add or remove boundary cells
 //   q: quit nicely
 
-// To do: cleanup too many parameters(?)
+// To do: speedup calculation, cleanup too many parameters(?)
 
 #include "fluidsim.h"
 #include <iostream>
@@ -15,9 +15,9 @@
 
 // Default values
 int SCREEN_WIDTH = 800;
-int SCREEN_HEIGHT;
-int N = 50;                     // Grid size
-int SIM_LEN = -1;               // Based on actual framerate
+int SCREEN_HEIGHT = SCREEN_WIDTH;
+int N = 50;                     // Grid size (not including borders)
+int SIM_LEN = -1;               // In ticks
 
 const int TICK_INTERVAL = 20;   // Sets framerate at 1000/TICK_INTERVAL
 
@@ -26,8 +26,8 @@ float dt = 0.02;
 float DIFF = 0.01;
 
 // Flags
-int DISPLAY_CONSOLE = false;    // Console graphics
-//const bool DRAW_GRID = false;
+int DISPLAY_CONSOLE = false;    // Console numbers for debug
+//bool DRAW_GRID = false;
 int DRAW_VEL = true;
 int DEMO = 0;
 int WALLS = 15;                 // Default all walls
@@ -36,7 +36,7 @@ float MOUSE_DENS = 100.0;
 float MOUSE_VEL = 800.0;
 
 // More global variables
-int nsize;
+int nsize;                      // Set after command line arguments
 static unsigned int next_time;
 
 // Functions
@@ -93,7 +93,7 @@ void screen_draw(Bound &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfl
     SDL_RenderPresent(renderer);
 }
 
-// Add density (or velocity) based on user input
+// Add density and velocity based on user input
 void process_input(Bound &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev, vfloat &v_prev, bool &exit_flag)
 {
     vbool &bound = bi.bound;
@@ -125,13 +125,11 @@ void process_input(Bound &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev, v
         {
             if (mouse_state == SDL_BUTTON(SDL_BUTTON_LEFT))
             {
-                //std::cout << "Left ";
                 dens_prev[IX(grid_x,grid_y)] += MOUSE_DENS;
             }
 
             if (mouse_state == SDL_BUTTON(SDL_BUTTON_RIGHT))
             {
-                //std::cout << "Right ";
                 if (not_on_edge)
                 {
                     dens[IX(grid_x,grid_y)]   = 0.0f;
@@ -142,7 +140,6 @@ void process_input(Bound &bi, vfloat &dens_prev, vfloat &dens, vfloat &u_prev, v
                 }
             }
         }
-        //std::cout << "mouse: " << x << ' ' << y << '|' << grid_x << ' ' << grid_y << std::endl;
     }
 
     if (kb_state[SDL_SCANCODE_LEFT])    u_prev[IX(grid_x,grid_y)] -= MOUSE_VEL;
@@ -302,8 +299,6 @@ int main(int argc, char **argv)
     static vbool bound_init(nsize, 0);
     bi.bound = bound_init;
     bi.walls = WALLS;
-
-    //fill_n(dens_prev, nsize, 0.0);
 
     // SDL initialize
     SDL_Window* window = NULL;
