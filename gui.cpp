@@ -5,18 +5,13 @@
 //   Lshift+left or lshift+right: add or remove boundary cells
 //   q: quit nicely
 
-// To do: Fix framerate (see DELAY_LENGTH below), cleanup too many parameters?
-
+// To do: cleanup too many parameters(?)
 
 #include "fluidsim.h"
 #include <iostream>
 #include <SDL2/SDL.h>
 #include <stdio.h>
-#include <chrono>
-#include <thread>
 #include <getopt.h>
-#include <stdlib.h>
-#include <stdexcept>
 
 // Default values
 int SCREEN_WIDTH = 800;
@@ -24,8 +19,7 @@ int SCREEN_HEIGHT;
 int N = 50;                     // Grid size
 int SIM_LEN = -1;               // Based on actual framerate
 
-// Locks framerate at ~?, see stackoverflow.com/q/23258650/3163618
-const std::chrono::milliseconds DELAY_LENGTH(5);
+const int TICK_INTERVAL = 20;   // Sets framerate at 1000/TICK_INTERVAL
 
 float VISC = 0.001;
 float dt = 0.02;
@@ -41,8 +35,11 @@ int WALLS = 15;                 // Default all walls
 float MOUSE_DENS = 100.0;
 float MOUSE_VEL = 800.0;
 
+// More global variables
 int nsize;
+static unsigned int next_time;
 
+// Functions
 void console_write(vfloat &x)
 {
     for (int j=N+1; j>=0; j--)
@@ -229,6 +226,18 @@ void demo_init_nsize()
     nsize = (N+2)*(N+2);
 }
 
+// Time based game loop from SDL examples
+unsigned int time_left(void)
+{
+    unsigned int now;
+    now = SDL_GetTicks();
+    if (next_time <= now)
+        return 0;
+    else
+        return next_time - now;
+}
+
+
 int main(int argc, char **argv)
 {
     // Command line input options
@@ -313,17 +322,13 @@ int main(int argc, char **argv)
     SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); // Background color, should not see this
     SDL_RenderClear(renderer);
 
-    //timeBeginPeriod(1); // Set period to 1ms
-    std::chrono::time_point<std::chrono::system_clock> t_start, t_end;
-    std::chrono::duration<double, std::milli> elapsed_ms;
-
     demo_bound(bi);
+
+    next_time = SDL_GetTicks() + TICK_INTERVAL;
 
     // Main loop
     for (unsigned int t=0; t < unsigned(SIM_LEN); t++)
     {
-        t_start = std::chrono::system_clock::now();
-
         process_input(bi, dens_prev, dens, u_prev, v_prev, exit_flag);
 
         demo_loop(dens_prev, u_prev, v_prev, t);
@@ -343,13 +348,8 @@ int main(int argc, char **argv)
 
         screen_draw(bi, renderer, dens, u, v);
 
-        t_end = std::chrono::system_clock::now();
-        elapsed_ms = t_end - t_start;
-
-        //if (elapsed_ms.count())
-        //    std::cout << "ms: " << elapsed_ms.count() << '\n';
-
-        std::this_thread::sleep_for(DELAY_LENGTH - elapsed_ms);
+        SDL_Delay(time_left());
+        next_time += TICK_INTERVAL;
 
         if (exit_flag) break;
     }
