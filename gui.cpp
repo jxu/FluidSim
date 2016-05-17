@@ -215,7 +215,7 @@ void demo_loop(vfloat &dens_prev, vfloat &u_prev, vfloat &v_prev, int t)
     }
 }
 
-void demo_init_nsize()
+void init_nsize()
 {
     if (DEMO==2)
         N = 100;
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
         }
     }
 
-    demo_init_nsize();
+    init_nsize();
     SCREEN_HEIGHT = SCREEN_WIDTH;
     Bound bi;
     bool exit_flag = false;
