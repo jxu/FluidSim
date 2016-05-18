@@ -5,4 +5,5 @@ See source code for command line options. Use `--demo` or `--demo2` for demos.
 
 Requirements
 ------------
-- SDL2.dll from SDL2 in the same directory as executable file
+- Running on Windows: SDL2.dll from SDL2 in the same directory as executable file
+- Running on Linux: libsdl2-2.0-0 package
