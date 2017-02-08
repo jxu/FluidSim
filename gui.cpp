@@ -7,6 +7,7 @@
 
 // To do: speedup calculation, cleanup too many parameters(?)
 
+#include <vector>
 #include "fluidsim.h"
 #include <iostream>
 #include <SDL2/SDL.h>
