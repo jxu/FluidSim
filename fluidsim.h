@@ -16,9 +16,9 @@ inline int IX(int i, int j){return i + (N+2)*j;}
 struct Bound
 {
     int b;
-    int walls; // bitmask
+    int walls; // bitfield 
     vbool bound;
-} bi;
+};
 
 // Set boundaries
 void set_bnd(Bound &bi, vfloat &x)

@@ -5,7 +5,8 @@
 //   Lshift+left or lshift+right: add or remove boundary cells
 //   q: quit nicely
 
-// To do: speedup calculation, cleanup too many parameters(?)
+// TODO: speedup calculation, cleanup too many parameters(?)
+// Clean up this terrible inconsistent mess?
 
 #include <vector>
 #include "fluidsim.h"
@@ -26,12 +27,12 @@ float VISC = 0.001;
 float dt = 0.02;
 float DIFF = 0.01;
 
-// Flags
+// Flags (int for get_opt to not complain)
 int DISPLAY_CONSOLE = false;    // Console numbers for debug
 //bool DRAW_GRID = false;
 int DRAW_VEL = true;
 int DEMO = 0;
-int WALLS = 15;                 // Default all walls
+int WALLS = 15;                 // Bitfield for walls. Default: all
 
 float MOUSE_DENS = 100.0;
 float MOUSE_VEL = 800.0;
@@ -39,6 +40,14 @@ float MOUSE_VEL = 800.0;
 // More global variables
 int nsize;                      // Set after command line arguments
 static unsigned int next_time;
+
+struct draw_options 
+{
+    int color_mode;
+    // More stuff 
+};
+
+
 
 // Functions
 void console_write(vfloat &x)
@@ -52,7 +61,8 @@ void console_write(vfloat &x)
     std::cout << '\n';
 }
 
-void screen_draw(Bound &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfloat &v)
+void screen_draw(draw_options opt, Bound &bi, SDL_Renderer *renderer, 
+                 vfloat &dens, vfloat &u, vfloat &v)
 {
     vbool &bound = bi.bound;
     const float r_size = SCREEN_WIDTH / float(N+2);
@@ -69,9 +79,19 @@ void screen_draw(Bound &bi, SDL_Renderer *renderer, vfloat &dens, vfloat &u, vfl
             if (bound[IX(i,j)] == 0)
             {
                 int color = std::min(int(dens[IX(i,j)] * 255), 255);
-                SDL_SetRenderDrawColor(renderer, color, color, color, 0);
+                if (opt.color_mode == 0)
+                {
+                    // Render fluid as gray
+                    SDL_SetRenderDrawColor(renderer, color, color, color, 0);
+                }
+                else if (opt.color_mode == 1)
+                {
+                    // Render fluid as blue
+                    int blue = std::min(int(1.5 * color), 255);
+                    SDL_SetRenderDrawColor(renderer, color, color, blue, 0);
+                }
             }
-            else // Object boundary
+            else // Object boundary (blue)
                 SDL_SetRenderDrawColor(renderer, 0, 100, 200, 0);
 
             // Render rect
@@ -218,8 +238,7 @@ void demo_loop(vfloat &dens_prev, vfloat &u_prev, vfloat &v_prev, int t)
 
 void init_nsize()
 {
-    if (DEMO==2)
-        N = 100;
+    if (DEMO==2) N = 100;
 
     nsize = (N+2)*(N+2);
 }
@@ -301,6 +320,11 @@ int main(int argc, char **argv)
     bi.bound = bound_init;
     bi.walls = WALLS;
 
+    // Init draw options
+    draw_options opt;
+    opt.color_mode = 1;
+
+
     // SDL initialize
     SDL_Window* window = NULL;
 
@@ -342,7 +366,7 @@ int main(int argc, char **argv)
             console_write(dens_prev);
         }
 
-        screen_draw(bi, renderer, dens, u, v);
+        screen_draw(opt, bi, renderer, dens, u, v);
 
         SDL_Delay(time_left());
         next_time += TICK_INTERVAL;
