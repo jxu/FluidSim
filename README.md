@@ -12,5 +12,5 @@ Compiling on Linux
 ------------------
 Install libsdl2-dev.
 
-Compile with `g++ -O3 -Wall -o gui gui.cpp -lSDL2`
-`
+Compile with `make`.
+
